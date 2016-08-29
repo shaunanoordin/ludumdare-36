@@ -613,19 +613,7 @@ var App = function () {
         for (var _iterator8 = this.actors[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
           var _actor3 = _step8.value;
 
-          if (!_actor3.spritesheet || !_actor3.spritesheet.loaded || !_actor3.animationSet || !_actor3.animationSet.actions[_actor3.animationName]) continue;
-
-          var animationSet = _actor3.animationSet;
-          var srcW = animationSet.tileWidth;
-          var srcH = animationSet.tileHeight;
-          var srcX = srcW * _actor3.direction;
-          var srcY = animationSet.actions[_actor3.animationName].steps[_actor3.animationStep].row * srcH;
-          var tgtX = Math.floor(_actor3.x - srcW / 2 + animationSet.tileOffsetX);
-          var tgtY = Math.floor(_actor3.y - srcH / 2 + animationSet.tileOffsetY);
-          var tgtW = srcW;
-          var tgtH = srcH;
-
-          this.context2d.drawImage(_actor3.spritesheet.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
+          this.paintSprite(_actor3);
         }
         //--------------------------------
       } catch (err) {
@@ -642,6 +630,32 @@ var App = function () {
           }
         }
       }
+    }
+  }, {
+    key: "paintSprite",
+    value: function paintSprite(obj) {
+      if (!obj.spritesheet || !obj.spritesheet.loaded || !obj.animationSet || !obj.animationSet.actions[obj.animationName]) return;
+
+      var animationSet = obj.animationSet;
+
+      var srcW = animationSet.tileWidth;
+      var srcH = animationSet.tileHeight;
+      var srcX = 0;
+      var srcY = 0;
+      if (animationSet.rule === ANIMATION_RULE_DIRECTIONAL) {
+        srcX = obj.direction * srcW;
+        srcY = animationSet.actions[obj.animationName].steps[obj.animationStep].row * srcH;
+      } else {
+        srcX = animationSet.actions[obj.animationName].steps[obj.animationStep].col * srcW;
+        srcY = animationSet.actions[obj.animationName].steps[obj.animationStep].row * srcH;
+      }
+
+      var tgtX = Math.floor(obj.x - srcW / 2 + animationSet.tileOffsetX);
+      var tgtY = Math.floor(obj.y - srcH / 2 + animationSet.tileOffsetY);
+      var tgtW = srcW;
+      var tgtH = srcH;
+
+      this.context2d.drawImage(obj.spritesheet.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
     }
 
     //----------------------------------------------------------------
@@ -732,6 +746,9 @@ var MAX_KEYS = 128;
 var STATE_START = 0;
 var STATE_ACTION = 1;
 var STATE_END = 2;
+
+var ANIMATION_RULE_BASIC = "basic";
+var ANIMATION_RULE_DIRECTIONAL = "directional";
 //==============================================================================
 
 /*  Actor Class
@@ -1206,32 +1223,49 @@ function initialise() {
   //Images
   //--------------------------------
   this.assets.images.actor = new ImageAsset("assets/actor.png");
+  this.assets.images.box = new ImageAsset("assets/box.png");
   //--------------------------------
 
   //Animations
   //--------------------------------
   var STEPS_PER_SECOND = FRAMES_PER_SECOND / 10;
   this.animationSets = {
-    "actor": {
-      "tileWidth": 64,
-      "tileHeight": 64,
-      "tileOffsetX": 0,
-      "tileOffsetY": -16,
-      "actions": {
-        "idle": {
-          "loop": true,
-          "steps": [{ row: 0, duration: STEPS_PER_SECOND }]
+    actor: {
+      rule: ANIMATION_RULE_DIRECTIONAL,
+      tileWidth: 64,
+      tileHeight: 64,
+      tileOffsetX: 0,
+      tileOffsetY: -16,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [{ row: 0, duration: 1 }]
         },
-        "walk": {
-          "tileWidth": 64,
-          "tileHeight": 64,
-          "tileOffsetX": 0,
-          "tileOffsetY": 0,
-          "loop": true,
-          "steps": [{ row: 1, duration: STEPS_PER_SECOND }, { row: 2, duration: STEPS_PER_SECOND }, { row: 3, duration: STEPS_PER_SECOND }, { row: 2, duration: STEPS_PER_SECOND }]
+        walk: {
+          loop: true,
+          steps: [{ row: 1, duration: STEPS_PER_SECOND }, { row: 2, duration: STEPS_PER_SECOND }, { row: 3, duration: STEPS_PER_SECOND }, { row: 2, duration: STEPS_PER_SECOND }]
+        }
+      }
+    },
+
+    box: {
+      rule: ANIMATION_RULE_BASIC,
+      tileWidth: 64,
+      tileHeight: 64,
+      tileOffsetX: 0,
+      tileOffsetY: 0,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [{ col: 0, row: 0, duration: 1 }]
+        },
+        glow: {
+          loop: true,
+          steps: [{ col: 1, row: 0, duration: STEPS_PER_SECOND }, { col: 0, row: 1, duration: STEPS_PER_SECOND }, { col: 1, row: 1, duration: STEPS_PER_SECOND }]
         }
       }
     }
+
   };
 
   //Process Animations; expand steps to many frames per steps.
@@ -1368,12 +1402,48 @@ function runAction() {
     var newAoE = new AoE("", x, y, AOE_SIZE, SHAPE_CIRCLE, 5, [new Effect("push", { x: Math.cos(this.refs["player"].rotation) * PUSH_POWER, y: Math.sin(this.refs["player"].rotation) * PUSH_POWER }, 2, STACKING_RULE_ADD)]);
     this.areasOfEffect.push(newAoE);
   }
+  //--------------------------------
 
-  //Try animation!
+  //Animations
+  //--------------------------------
   if (playerIsIdle) {
     this.refs["player"].playAnimation("idle");
   } else {
     this.refs["player"].playAnimation("walk");
+  }
+
+  if (this.refs["boxes"]) {
+    var _iteratorNormalCompletion10 = true;
+    var _didIteratorError10 = false;
+    var _iteratorError10 = undefined;
+
+    try {
+      for (var _iterator10 = this.refs["boxes"][Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+        var box = _step10.value;
+
+        console.log(box.effects.length);
+        if (box.effects.find(function (eff) {
+          return eff.name === "charge";
+        })) {
+          box.playAnimation("glow");
+        } else {
+          box.playAnimation("idle");
+        }
+      }
+    } catch (err) {
+      _didIteratorError10 = true;
+      _iteratorError10 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion10 && _iterator10.return) {
+          _iterator10.return();
+        }
+      } finally {
+        if (_didIteratorError10) {
+          throw _iteratorError10;
+        }
+      }
+    }
   }
   //--------------------------------
 
@@ -1398,9 +1468,8 @@ function startLevelInit() {
       midY = this.height / 2;
 
   this.refs["player"] = new Actor("player", midX, midY + 256, 32, SHAPE_CIRCLE);
-  this.refs["player"].spritesheet = new ImageAsset("assets/actor.png");
-  this.refs["player"].animationStep = 0;
-  this.refs["player"].animationSet = this.animationSets["actor"];
+  this.refs["player"].spritesheet = this.assets.images.actor;
+  this.refs["player"].animationSet = this.animationSets.actor;
   this.refs["player"].rotation = ROTATION_NORTH;
   this.actors.push(this.refs["player"]);
 
@@ -1440,42 +1509,20 @@ function startLevel1() {
   var chargeEffect = new Effect("charge", {}, 1, STACKING_RULE_ADD);
 
   this.refs.boxes = [new Actor("", midX - 128, midY, 64, SHAPE_SQUARE)];
-  var _iteratorNormalCompletion10 = true;
-  var _didIteratorError10 = false;
-  var _iteratorError10 = undefined;
-
-  try {
-    for (var _iterator10 = this.refs.boxes[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-      var box = _step10.value;
-
-      box.attributes.box = true;
-      this.actors.push(box);
-    }
-  } catch (err) {
-    _didIteratorError10 = true;
-    _iteratorError10 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion10 && _iterator10.return) {
-        _iterator10.return();
-      }
-    } finally {
-      if (_didIteratorError10) {
-        throw _iteratorError10;
-      }
-    }
-  }
-
-  this.refs.plates = [new AoE("", midX + 128, midY + 0, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect])];
   var _iteratorNormalCompletion11 = true;
   var _didIteratorError11 = false;
   var _iteratorError11 = undefined;
 
   try {
-    for (var _iterator11 = this.refs.plates[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-      var plate = _step11.value;
+    for (var _iterator11 = this.refs.boxes[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+      var box = _step11.value;
 
-      this.areasOfEffect.push(plate);
+      box.attributes.box = true;
+      box.spritesheet = this.assets.images.box;
+      box.animationSet = this.animationSets.box;
+      this.actors.push(box);
+
+      console.log(box);
     }
   } catch (err) {
     _didIteratorError11 = true;
@@ -1488,6 +1535,32 @@ function startLevel1() {
     } finally {
       if (_didIteratorError11) {
         throw _iteratorError11;
+      }
+    }
+  }
+
+  this.refs.plates = [new AoE("", midX + 128, midY + 0, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect])];
+  var _iteratorNormalCompletion12 = true;
+  var _didIteratorError12 = false;
+  var _iteratorError12 = undefined;
+
+  try {
+    for (var _iterator12 = this.refs.plates[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+      var plate = _step12.value;
+
+      this.areasOfEffect.push(plate);
+    }
+  } catch (err) {
+    _didIteratorError12 = true;
+    _iteratorError12 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion12 && _iterator12.return) {
+        _iterator12.return();
+      }
+    } finally {
+      if (_didIteratorError12) {
+        throw _iteratorError12;
       }
     }
   }
@@ -1505,38 +1578,38 @@ function checkIfAllBoxesAreCharged() {
   var allBoxesAreCharged = true;
 
   if (this.refs["plates"] && this.refs["boxes"]) {
-    var _iteratorNormalCompletion12 = true;
-    var _didIteratorError12 = false;
-    var _iteratorError12 = undefined;
+    var _iteratorNormalCompletion13 = true;
+    var _didIteratorError13 = false;
+    var _iteratorError13 = undefined;
 
     try {
-      for (var _iterator12 = this.refs["plates"][Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-        var plate = _step12.value;
+      for (var _iterator13 = this.refs["plates"][Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+        var plate = _step13.value;
 
         var thisPlateIsCharged = false;
-        var _iteratorNormalCompletion13 = true;
-        var _didIteratorError13 = false;
-        var _iteratorError13 = undefined;
+        var _iteratorNormalCompletion14 = true;
+        var _didIteratorError14 = false;
+        var _iteratorError14 = undefined;
 
         try {
-          for (var _iterator13 = this.refs["boxes"][Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-            var box = _step13.value;
+          for (var _iterator14 = this.refs["boxes"][Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+            var box = _step14.value;
 
             if (this.isATouchingB(box, plate)) {
               thisPlateIsCharged = true;
             }
           }
         } catch (err) {
-          _didIteratorError13 = true;
-          _iteratorError13 = err;
+          _didIteratorError14 = true;
+          _iteratorError14 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion13 && _iterator13.return) {
-              _iterator13.return();
+            if (!_iteratorNormalCompletion14 && _iterator14.return) {
+              _iterator14.return();
             }
           } finally {
-            if (_didIteratorError13) {
-              throw _iteratorError13;
+            if (_didIteratorError14) {
+              throw _iteratorError14;
             }
           }
         }
@@ -1544,16 +1617,16 @@ function checkIfAllBoxesAreCharged() {
         allBoxesAreCharged = allBoxesAreCharged && thisPlateIsCharged;
       }
     } catch (err) {
-      _didIteratorError12 = true;
-      _iteratorError12 = err;
+      _didIteratorError13 = true;
+      _iteratorError13 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion12 && _iterator12.return) {
-          _iterator12.return();
+        if (!_iteratorNormalCompletion13 && _iterator13.return) {
+          _iterator13.return();
         }
       } finally {
-        if (_didIteratorError12) {
-          throw _iteratorError12;
+        if (_didIteratorError13) {
+          throw _iteratorError13;
         }
       }
     }

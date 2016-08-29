@@ -444,23 +444,36 @@ class App {
     //--------------------------------
     //Actors
     for (let actor of this.actors) {
-      if (!actor.spritesheet || !actor.spritesheet.loaded ||
-          !actor.animationSet || !actor.animationSet.actions[actor.animationName])
-        continue;
-      
-      const animationSet = actor.animationSet;
-      const srcW = animationSet.tileWidth;
-      const srcH = animationSet.tileHeight;
-      const srcX = srcW * actor.direction;
-      const srcY = animationSet.actions[actor.animationName].steps[actor.animationStep].row * srcH;
-      const tgtX = Math.floor(actor.x - srcW / 2 + animationSet.tileOffsetX);
-      const tgtY = Math.floor(actor.y - srcH / 2 + animationSet.tileOffsetY);
-      const tgtW = srcW;
-      const tgtH = srcH;
-      
-      this.context2d.drawImage(actor.spritesheet.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
+      this.paintSprite(actor);
     }
     //--------------------------------
+  }
+  
+  paintSprite(obj) {
+    if (!obj.spritesheet || !obj.spritesheet.loaded ||
+        !obj.animationSet || !obj.animationSet.actions[obj.animationName])
+      return;
+    
+    const animationSet = obj.animationSet;
+    
+    const srcW = animationSet.tileWidth;
+    const srcH = animationSet.tileHeight;    
+    let srcX = 0;
+    let srcY = 0;
+    if (animationSet.rule === ANIMATION_RULE_DIRECTIONAL) {
+      srcX = obj.direction * srcW;
+      srcY = animationSet.actions[obj.animationName].steps[obj.animationStep].row * srcH;
+    } else {
+      srcX = animationSet.actions[obj.animationName].steps[obj.animationStep].col * srcW;
+      srcY = animationSet.actions[obj.animationName].steps[obj.animationStep].row * srcH;
+    }
+    
+    const tgtX = Math.floor(obj.x - srcW / 2 + animationSet.tileOffsetX);
+    const tgtY = Math.floor(obj.y - srcH / 2 + animationSet.tileOffsetY);
+    const tgtW = srcW;
+    const tgtH = srcH;
+    
+    this.context2d.drawImage(obj.spritesheet.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
   }
   
   //----------------------------------------------------------------
@@ -541,6 +554,9 @@ const MAX_KEYS = 128;
 const STATE_START = 0;
 const STATE_ACTION = 1;
 const STATE_END = 2;
+
+const ANIMATION_RULE_BASIC = "basic";
+const ANIMATION_RULE_DIRECTIONAL = "directional";  
 //==============================================================================
 
 /*  Actor Class
@@ -912,31 +928,29 @@ function initialise() {
   //Images
   //--------------------------------
   this.assets.images.actor = new ImageAsset("assets/actor.png");
+  this.assets.images.box = new ImageAsset("assets/box.png");
   //--------------------------------
   
   //Animations
   //--------------------------------
   const STEPS_PER_SECOND = FRAMES_PER_SECOND / 10;
   this.animationSets = {
-    "actor": {
-      "tileWidth": 64,
-      "tileHeight": 64,
-      "tileOffsetX": 0,
-      "tileOffsetY": -16,        
-      "actions": {
-        "idle": {
-          "loop": true,
-          "steps": [
-            { row: 0, duration: STEPS_PER_SECOND }
+    actor: {
+      rule: ANIMATION_RULE_DIRECTIONAL,
+      tileWidth: 64,
+      tileHeight: 64,
+      tileOffsetX: 0,
+      tileOffsetY: -16,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [
+            { row: 0, duration: 1 }
           ],
         },
-        "walk": {
-          "tileWidth": 64,
-          "tileHeight": 64,
-          "tileOffsetX": 0,
-          "tileOffsetY": 0,
-          "loop": true,
-          "steps": [
+        walk: {
+          loop: true,
+          steps: [
             { row: 1, duration: STEPS_PER_SECOND },
             { row: 2, duration: STEPS_PER_SECOND },
             { row: 3, duration: STEPS_PER_SECOND },
@@ -945,7 +959,33 @@ function initialise() {
         },
       },
     },
+    
+    box: {
+      rule: ANIMATION_RULE_BASIC,
+      tileWidth: 64,
+      tileHeight: 64,
+      tileOffsetX: 0,
+      tileOffsetY: 0,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [
+            { col: 0, row: 0, duration: 1 }
+          ],
+        },
+        glow: {
+          loop: true,
+          steps: [
+            { col: 1, row: 0, duration: STEPS_PER_SECOND },
+            { col: 0, row: 1, duration: STEPS_PER_SECOND },
+            { col: 1, row: 1, duration: STEPS_PER_SECOND },
+          ],
+        },
+      },
+    },
+    
   };
+  
   
   //Process Animations; expand steps to many frames per steps.
   for (let animationTitle in this.animationSets) {
@@ -1072,12 +1112,24 @@ function runAction() {
       ]);
     this.areasOfEffect.push(newAoE);
   }
+  //--------------------------------
   
-  //Try animation!
+  //Animations
+  //--------------------------------
   if (playerIsIdle) {
     this.refs["player"].playAnimation("idle");
   } else {
     this.refs["player"].playAnimation("walk");
+  }
+  
+  if (this.refs["boxes"]) {
+    for (let box of this.refs["boxes"]) {
+      if (box.effects.find((eff) => { return eff.name === "charge" })) {
+        box.playAnimation("glow");
+      } else {
+        box.playAnimation("idle");
+      }
+    }
   }
   //--------------------------------
   
@@ -1101,9 +1153,8 @@ function startLevelInit() {
   const midX = this.width / 2, midY = this.height / 2;
   
   this.refs["player"] = new Actor("player", midX, midY + 256, 32, SHAPE_CIRCLE);
-  this.refs["player"].spritesheet = new ImageAsset("assets/actor.png");
-  this.refs["player"].animationStep = 0;
-  this.refs["player"].animationSet = this.animationSets["actor"];
+  this.refs["player"].spritesheet = this.assets.images.actor;
+  this.refs["player"].animationSet = this.animationSets.actor;
   this.refs["player"].rotation = ROTATION_NORTH;
   this.actors.push(this.refs["player"]);
   
@@ -1145,6 +1196,8 @@ function startLevel1() {
   ];
   for (let box of this.refs.boxes) {
     box.attributes.box = true;
+    box.spritesheet = this.assets.images.box;
+    box.animationSet = this.animationSets.box;
     this.actors.push(box);
   }
   
