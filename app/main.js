@@ -502,7 +502,9 @@ var App = function () {
   }, {
     key: "paint_action",
     value: function paint_action() {
-      //Paint Areas of Effects
+      //DEBUG: Paint hitboxes
+      //--------------------------------
+      //Areas of Effects
       var _iteratorNormalCompletion6 = true;
       var _didIteratorError6 = false;
       var _iteratorError6 = undefined;
@@ -537,7 +539,7 @@ var App = function () {
           }
         }
 
-        //Paint Actor hitboxes
+        //Actors
       } catch (err) {
         _didIteratorError6 = true;
         _iteratorError6 = err;
@@ -584,6 +586,10 @@ var App = function () {
         }
 
         //Paint sprites
+        //TODO: IMPROVE
+        //TODO: Layering
+        //--------------------------------
+        //Actors
       } catch (err) {
         _didIteratorError7 = true;
         _iteratorError7 = err;
@@ -621,6 +627,7 @@ var App = function () {
 
           this.context2d.drawImage(_actor3.spritesheet.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
         }
+        //--------------------------------
       } catch (err) {
         _didIteratorError8 = true;
         _iteratorError8 = err;
@@ -755,6 +762,7 @@ var Actor = function () {
     this.animationSet = null;
     this.animationName = "";
 
+    this.attributes = {};
     this.effects = [];
   }
 
@@ -890,7 +898,6 @@ var AoE = function () {
     var shape = arguments.length <= 4 || arguments[4] === undefined ? SHAPE_CIRCLE : arguments[4];
     var duration = arguments.length <= 5 || arguments[5] === undefined ? 1 : arguments[5];
     var effects = arguments.length <= 6 || arguments[6] === undefined ? [] : arguments[6];
-    var source = arguments.length <= 7 || arguments[7] === undefined ? null : arguments[7];
 
     _classCallCheck(this, AoE);
 
@@ -957,7 +964,6 @@ var Effect = function () {
     var data = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
     var duration = arguments.length <= 2 || arguments[2] === undefined ? 1 : arguments[2];
     var stackingRule = arguments.length <= 3 || arguments[3] === undefined ? STACKING_RULE_ADD : arguments[3];
-    var source = arguments.length <= 4 || arguments[4] === undefined ? null : arguments[4];
 
     _classCallCheck(this, Effect);
 
@@ -966,7 +972,6 @@ var Effect = function () {
     this.duration = duration;
     this.stackingRule = stackingRule;
     this.startDuration = duration;
-    this.source = source;
   }
 
   _createClass(Effect, [{
@@ -1360,7 +1365,7 @@ function runAction() {
     var distance = this.refs["player"].radius + AOE_SIZE / 2;
     var x = this.refs["player"].x + Math.cos(this.refs["player"].rotation) * distance;
     var y = this.refs["player"].y + Math.sin(this.refs["player"].rotation) * distance;;
-    var newAoE = new AoE("", x, y, AOE_SIZE, SHAPE_CIRCLE, 5, [new Effect("push", { x: Math.cos(this.refs["player"].rotation) * PUSH_POWER, y: Math.sin(this.refs["player"].rotation) * PUSH_POWER }, 2, STACKING_RULE_ADD, this.refs["player"])], this.refs["player"]);
+    var newAoE = new AoE("", x, y, AOE_SIZE, SHAPE_CIRCLE, 5, [new Effect("push", { x: Math.cos(this.refs["player"].rotation) * PUSH_POWER, y: Math.sin(this.refs["player"].rotation) * PUSH_POWER }, 2, STACKING_RULE_ADD)]);
     this.areasOfEffect.push(newAoE);
   }
 
@@ -1372,45 +1377,194 @@ function runAction() {
   }
   //--------------------------------
 
+  //Game rules
+  //--------------------------------
+  checkIfAllBoxesAreCharged.apply(this);
+  //--------------------------------
+
   //Win Condition
   //--------------------------------
   checkIfPlayerIsAtGoal.apply(this);
   //--------------------------------
 }
 
-function startLevel1() {
+function startLevelInit() {
   //Reset
   this.actors = [];
   this.areasOfEffect = [];
+  this.refs = {};
 
-  this.refs["player"] = new Actor("player", this.width / 2, this.height / 2, 32, SHAPE_CIRCLE, true);
+  var midX = this.width / 2,
+      midY = this.height / 2;
+
+  this.refs["player"] = new Actor("player", midX, midY + 256, 32, SHAPE_CIRCLE);
   this.refs["player"].spritesheet = new ImageAsset("assets/actor.png");
   this.refs["player"].animationStep = 0;
   this.refs["player"].animationSet = this.animationSets["actor"];
+  this.refs["player"].rotation = ROTATION_NORTH;
   this.actors.push(this.refs["player"]);
 
-  this.actors.push(new Actor("s1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
-  this.actors.push(new Actor("s2", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
-  this.actors.push(new Actor("c1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_CIRCLE));
-  this.actors.push(new Actor("c2", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_CIRCLE));
-
-  var wallN = new Actor("wallN", this.width / 2, this.height * -0.65, this.width, SHAPE_SQUARE);
-  var wallS = new Actor("wallS", this.width / 2, this.height * +1.65, this.width, SHAPE_SQUARE);
-  var wallE = new Actor("wallE", this.width * +1.35, this.height / 2, this.height, SHAPE_SQUARE);
-  var wallW = new Actor("wallW", this.width * -0.35, this.height / 2, this.height, SHAPE_SQUARE);
-  //let wallE = new Actor();
-  //let wallW = new Actor();
+  var wallN = new Actor("wallN", midX, midY - 672, this.width, SHAPE_SQUARE);
+  var wallS = new Actor("wallS", midX, midY + 688, this.width, SHAPE_SQUARE);
+  var wallE = new Actor("wallE", midX + 688, midY, this.height, SHAPE_SQUARE);
+  var wallW = new Actor("wallW", midX - 688, midY, this.height, SHAPE_SQUARE);
   wallE.canBeMoved = false;
   wallS.canBeMoved = false;
   wallW.canBeMoved = false;
   wallN.canBeMoved = false;
   this.actors.push(wallE, wallS, wallW, wallN);
 
-  this.areasOfEffect.push(new AoE("conveyorBelt", this.width / 2, this.height / 2 + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [new Effect("push", { x: 0, y: 4 }, 1, STACKING_RULE_ADD, null)], null));
+  this.refs["gate"] = new Actor("gate", midX, 16, 128, SHAPE_SQUARE);
+  this.refs["gate"].canBeMoved = false;
+  this.actors.push(this.refs["gate"]);
 
-  this.refs["goal"] = new AoE("goal", this.width / 2, this.height / 2 - 256, 64, SHAPE_SQUARE, DURATION_INFINITE, [], null);
+  this.refs["goal"] = new AoE("goal", this.width / 2, 32, 64, SHAPE_SQUARE, DURATION_INFINITE, []);
   this.areasOfEffect.push(this.refs["goal"]);
-  //--------------------------------  
+}
+
+function startLevel1() {
+  startLevelInit.apply(this);
+  //this.areasOfEffect.push(
+  //  new AoE("conveyorBelt", this.width / 2, this.height / 2 + 64, 64, SHAPE_SQUARE, DURATION_INFINITE,
+  //    [new Effect("push", { x: 0, y: 4 }, 1, STACKING_RULE_ADD, null)], null)
+  //);
+  //this.actors.push(new Actor("s1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
+
+  var midX = this.width / 2,
+      midY = this.height / 2;
+
+  this.refs.boxes = [];
+  this.refs.plates = [];
+  var newBox = void 0,
+      newPlate = void 0;
+  var chargeEffect = new Effect("charge", {}, 1, STACKING_RULE_ADD);
+
+  this.refs.boxes = [new Actor("", midX - 128, midY, 64, SHAPE_SQUARE)];
+  var _iteratorNormalCompletion10 = true;
+  var _didIteratorError10 = false;
+  var _iteratorError10 = undefined;
+
+  try {
+    for (var _iterator10 = this.refs.boxes[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+      var box = _step10.value;
+
+      box.attributes.box = true;
+      this.actors.push(box);
+    }
+  } catch (err) {
+    _didIteratorError10 = true;
+    _iteratorError10 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion10 && _iterator10.return) {
+        _iterator10.return();
+      }
+    } finally {
+      if (_didIteratorError10) {
+        throw _iteratorError10;
+      }
+    }
+  }
+
+  this.refs.plates = [new AoE("", midX + 128, midY + 0, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect])];
+  var _iteratorNormalCompletion11 = true;
+  var _didIteratorError11 = false;
+  var _iteratorError11 = undefined;
+
+  try {
+    for (var _iterator11 = this.refs.plates[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+      var plate = _step11.value;
+
+      this.areasOfEffect.push(plate);
+    }
+  } catch (err) {
+    _didIteratorError11 = true;
+    _iteratorError11 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion11 && _iterator11.return) {
+        _iterator11.return();
+      }
+    } finally {
+      if (_didIteratorError11) {
+        throw _iteratorError11;
+      }
+    }
+  }
+}
+
+function startLevel2() {
+  startLevelInit.apply(this);
+}
+
+function startLevel3() {
+  startLevelInit.apply(this);
+}
+
+function checkIfAllBoxesAreCharged() {
+  var allBoxesAreCharged = true;
+
+  if (this.refs["plates"] && this.refs["boxes"]) {
+    var _iteratorNormalCompletion12 = true;
+    var _didIteratorError12 = false;
+    var _iteratorError12 = undefined;
+
+    try {
+      for (var _iterator12 = this.refs["plates"][Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+        var plate = _step12.value;
+
+        var thisPlateIsCharged = false;
+        var _iteratorNormalCompletion13 = true;
+        var _didIteratorError13 = false;
+        var _iteratorError13 = undefined;
+
+        try {
+          for (var _iterator13 = this.refs["boxes"][Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+            var box = _step13.value;
+
+            if (this.isATouchingB(box, plate)) {
+              thisPlateIsCharged = true;
+            }
+          }
+        } catch (err) {
+          _didIteratorError13 = true;
+          _iteratorError13 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion13 && _iterator13.return) {
+              _iterator13.return();
+            }
+          } finally {
+            if (_didIteratorError13) {
+              throw _iteratorError13;
+            }
+          }
+        }
+
+        allBoxesAreCharged = allBoxesAreCharged && thisPlateIsCharged;
+      }
+    } catch (err) {
+      _didIteratorError12 = true;
+      _iteratorError12 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion12 && _iterator12.return) {
+          _iterator12.return();
+        }
+      } finally {
+        if (_didIteratorError12) {
+          throw _iteratorError12;
+        }
+      }
+    }
+  }
+
+  if (allBoxesAreCharged) {
+    if (this.refs["gate"] && this.refs["gate"].y >= -32) {
+      this.refs["gate"].x = this.width / 2 - 1 + Math.random() * 2;
+      this.refs["gate"].y -= 1;
+    }
+  }
 }
 
 function checkIfPlayerIsAtGoal() {
@@ -1419,9 +1573,13 @@ function checkIfPlayerIsAtGoal() {
 
     switch (this.store.level) {
       case 1:
-      case 2:
-      case 3:
         startLevel1.apply(this);
+        break;
+      case 2:
+        startLevel2.apply(this);
+        break;
+      case 3:
+        startLevel3.apply(this);
         break;
       default:
         this.changeState(STATE_END);

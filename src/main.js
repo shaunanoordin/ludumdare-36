@@ -30,7 +30,7 @@ class App {
     //--------------------------------
     this.assets = {
       images: {}
-    }
+    };
     this.assetsLoaded = true;
     this.scripts = {
       run: null,
@@ -383,7 +383,9 @@ class App {
   }
   
   paint_action() {
-    //Paint Areas of Effects
+    //DEBUG: Paint hitboxes
+    //--------------------------------
+    //Areas of Effects
     for (let aoe of this.areasOfEffect) {
       let durationPercentage = 1;
       if (!aoe.hasInfiniteDuration() && aoe.startDuration > 0) {
@@ -394,7 +396,7 @@ class App {
       switch (aoe.shape) {
         case SHAPE_CIRCLE:
           this.context2d.beginPath();
-          this.context2d.arc(aoe.x, aoe.y, aoe.size/2, 0, 2 * Math.PI);
+          this.context2d.arc(aoe.x, aoe.y, aoe.size / 2, 0, 2 * Math.PI);
           this.context2d.stroke();
           this.context2d.closePath();
           this.context2d.beginPath();
@@ -411,13 +413,13 @@ class App {
       }
     }
     
-    //Paint Actor hitboxes
+    //Actors
     this.context2d.strokeStyle = "rgba(0,0,0,1)";
     for (let actor of this.actors) {
       switch (actor.shape) {
         case SHAPE_CIRCLE:
           this.context2d.beginPath();
-          this.context2d.arc(actor.x, actor.y, actor.size/2, 0, 2 * Math.PI);
+          this.context2d.arc(actor.x, actor.y, actor.size / 2, 0, 2 * Math.PI);
           this.context2d.stroke();
           this.context2d.closePath();
           this.context2d.beginPath();
@@ -435,7 +437,12 @@ class App {
       }
     }
     
+    
     //Paint sprites
+    //TODO: IMPROVE
+    //TODO: Layering
+    //--------------------------------
+    //Actors
     for (let actor of this.actors) {
       if (!actor.spritesheet || !actor.spritesheet.loaded ||
           !actor.animationSet || !actor.animationSet.actions[actor.animationName])
@@ -453,6 +460,7 @@ class App {
       
       this.context2d.drawImage(actor.spritesheet.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
     }
+    //--------------------------------
   }
   
   //----------------------------------------------------------------
@@ -554,6 +562,7 @@ class Actor {
     this.animationSet = null;
     this.animationName = "";
     
+    this.attributes = {};
     this.effects = [];
   }
   
@@ -634,7 +643,7 @@ const DIRECTION_NORTH = 3;
  */
 //==============================================================================
 class AoE {
-  constructor(id = "", x = 0, y = 0, size = 32, shape = SHAPE_CIRCLE, duration = 1, effects = [], source = null) {
+  constructor(id = "", x = 0, y = 0, size = 32, shape = SHAPE_CIRCLE, duration = 1, effects = []) {
     this.id = id; 
     this.x = x;
     this.y = y;
@@ -668,13 +677,12 @@ const DURATION_INFINITE = 0;
  */
 //==============================================================================
 class Effect {
-  constructor(name = "", data = {}, duration = 1, stackingRule = STACKING_RULE_ADD, source = null) {
+  constructor(name = "", data = {}, duration = 1, stackingRule = STACKING_RULE_ADD) {
     this.name = name;
     this.data = data;
     this.duration = duration;
     this.stackingRule = stackingRule;
     this.startDuration = duration;
-    this.source = source;
   }
   
   hasInfiniteDuration() {
@@ -1060,9 +1068,8 @@ function runAction() {
       [
         new Effect("push",
           { x: Math.cos(this.refs["player"].rotation) * PUSH_POWER, y: Math.sin(this.refs["player"].rotation) * PUSH_POWER },
-          2, STACKING_RULE_ADD, this.refs["player"])
-      ],
-      this.refs["player"]);
+          2, STACKING_RULE_ADD)
+      ]);
     this.areasOfEffect.push(newAoE);
   }
   
@@ -1074,48 +1081,110 @@ function runAction() {
   }
   //--------------------------------
   
+  //Game rules
+  //--------------------------------
+  checkIfAllBoxesAreCharged.apply(this);
+  //--------------------------------
+  
   //Win Condition
   //--------------------------------
   checkIfPlayerIsAtGoal.apply(this);
   //--------------------------------
 }
 
-function startLevel1() {
+function startLevelInit() {
   //Reset
   this.actors = [];
   this.areasOfEffect = [];
+  this.refs = {};
   
-  this.refs["player"] = new Actor("player", this.width / 2, this.height / 2, 32, SHAPE_CIRCLE, true);
+  const midX = this.width / 2, midY = this.height / 2;
+  
+  this.refs["player"] = new Actor("player", midX, midY + 256, 32, SHAPE_CIRCLE);
   this.refs["player"].spritesheet = new ImageAsset("assets/actor.png");
   this.refs["player"].animationStep = 0;
   this.refs["player"].animationSet = this.animationSets["actor"];
+  this.refs["player"].rotation = ROTATION_NORTH;
   this.actors.push(this.refs["player"]);
   
-  this.actors.push(new Actor("s1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
-  this.actors.push(new Actor("s2", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
-  this.actors.push(new Actor("c1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_CIRCLE));
-  this.actors.push(new Actor("c2", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_CIRCLE));
-  
-  let wallN = new Actor("wallN", this.width / 2, this.height * -0.65, this.width, SHAPE_SQUARE);
-  let wallS = new Actor("wallS", this.width / 2, this.height * +1.65, this.width, SHAPE_SQUARE);
-  let wallE = new Actor("wallE", this.width * +1.35, this.height / 2, this.height, SHAPE_SQUARE);
-  let wallW = new Actor("wallW", this.width * -0.35, this.height / 2, this.height, SHAPE_SQUARE);
-  //let wallE = new Actor();
-  //let wallW = new Actor();
+  let wallN = new Actor("wallN", midX, midY - 672, this.width, SHAPE_SQUARE);
+  let wallS = new Actor("wallS", midX, midY + 688, this.width, SHAPE_SQUARE);
+  let wallE = new Actor("wallE", midX + 688, midY, this.height, SHAPE_SQUARE);
+  let wallW = new Actor("wallW", midX - 688, midY, this.height, SHAPE_SQUARE);
   wallE.canBeMoved = false;
   wallS.canBeMoved = false;
   wallW.canBeMoved = false;
   wallN.canBeMoved = false;
   this.actors.push(wallE, wallS, wallW, wallN);
+
+  this.refs["gate"] = new Actor("gate", midX, 16, 128, SHAPE_SQUARE);
+  this.refs["gate"].canBeMoved = false;
+  this.actors.push(this.refs["gate"]);
   
-  this.areasOfEffect.push(
-    new AoE("conveyorBelt", this.width / 2, this.height / 2 + 64, 64, SHAPE_SQUARE, DURATION_INFINITE,
-      [new Effect("push", { x: 0, y: 4 }, 1, STACKING_RULE_ADD, null)], null)
-  );
-  
-  this.refs["goal"] = new AoE("goal", this.width / 2, this.height / 2 - 256, 64, SHAPE_SQUARE, DURATION_INFINITE, [], null);
+  this.refs["goal"] = new AoE("goal", this.width / 2, 32, 64, SHAPE_SQUARE, DURATION_INFINITE, []);
   this.areasOfEffect.push(this.refs["goal"]);
-  //--------------------------------  
+}
+
+function startLevel1() {
+  startLevelInit.apply(this);
+  //this.areasOfEffect.push(
+  //  new AoE("conveyorBelt", this.width / 2, this.height / 2 + 64, 64, SHAPE_SQUARE, DURATION_INFINITE,
+  //    [new Effect("push", { x: 0, y: 4 }, 1, STACKING_RULE_ADD, null)], null)
+  //);
+  //this.actors.push(new Actor("s1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
+  
+  const midX = this.width / 2, midY = this.height / 2;
+  
+  this.refs.boxes = [];
+  this.refs.plates = [];
+  let newBox, newPlate;
+  const chargeEffect = new Effect("charge", {}, 1, STACKING_RULE_ADD);
+  
+  this.refs.boxes = [
+    new Actor("", midX - 128, midY, 64, SHAPE_SQUARE),
+  ];
+  for (let box of this.refs.boxes) {
+    box.attributes.box = true;
+    this.actors.push(box);
+  }
+  
+  this.refs.plates = [
+    new AoE("", midX + 128, midY + 0, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect]),
+  ];
+  for (let plate of this.refs.plates) {
+    this.areasOfEffect.push(plate);
+  }
+}
+
+function startLevel2() {
+  startLevelInit.apply(this);
+}
+
+function startLevel3() {
+  startLevelInit.apply(this);
+}
+
+function checkIfAllBoxesAreCharged() {
+  let allBoxesAreCharged = true;
+  
+  if (this.refs["plates"] && this.refs["boxes"]) {
+    for (let plate of this.refs["plates"]) {
+      let thisPlateIsCharged = false;
+      for (let box of this.refs["boxes"]) {
+        if (this.isATouchingB(box, plate)) {
+          thisPlateIsCharged = true;
+        }
+      }
+      allBoxesAreCharged = allBoxesAreCharged && thisPlateIsCharged;
+    }
+  }
+  
+  if (allBoxesAreCharged) {
+    if (this.refs["gate"] && this.refs["gate"].y >= -32) {
+      this.refs["gate"].x = this.width / 2 - 1 + Math.random() * 2;
+      this.refs["gate"].y -= 1;
+    }  
+  }
 }
 
 function checkIfPlayerIsAtGoal() {
@@ -1124,10 +1193,14 @@ function checkIfPlayerIsAtGoal() {
     
     switch (this.store.level) {
       case 1:
-      case 2:
-      case 3:
         startLevel1.apply(this);
         break;
+      case 2:
+        startLevel2.apply(this);
+        break;
+      case 3:
+        startLevel3.apply(this);
+        break;      
       default:
         this.changeState(STATE_END);
     }    
