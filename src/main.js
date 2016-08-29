@@ -139,7 +139,9 @@ class App {
     for (let aoe of this.areasOfEffect) {
       for (let actor of this.actors) {
         if (this.isATouchingB(aoe, actor)) {
-          actor.effects.push(...aoe.effects);  //Array.push can push multiple elements.
+          for (let effect of aoe.effects) {
+            actor.effects.push(effect.copy());
+          }
         }
       }
     }
@@ -166,7 +168,7 @@ class App {
     //--------------------------------
     //Arrange sprites by vertical order.
     this.actors.sort((a, b) => {
-      return a.bottom < b.bottom;
+      return a.bottom - b.bottom;
     });    
     
     //this.paint();  //moved to run()
@@ -704,6 +706,10 @@ class Effect {
   hasInfiniteDuration() {
     return this.startDuration === DURATION_INFINITE;
   }
+  
+  copy() {
+    return new Effect(this.name, this.data, this.duration, this.stackingRule);
+  }
 }
 
 const STACKING_RULE_ADD = 0;
@@ -976,9 +982,10 @@ function initialise() {
         glow: {
           loop: true,
           steps: [
-            { col: 1, row: 0, duration: STEPS_PER_SECOND },
-            { col: 0, row: 1, duration: STEPS_PER_SECOND },
-            { col: 1, row: 1, duration: STEPS_PER_SECOND },
+            { col: 1, row: 0, duration: STEPS_PER_SECOND * 2 },
+            { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 },
+            { col: 1, row: 1, duration: STEPS_PER_SECOND * 2 },
+            { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 },
           ],
         },
       },
@@ -1180,7 +1187,7 @@ function startLevel1() {
   startLevelInit.apply(this);
   //this.areasOfEffect.push(
   //  new AoE("conveyorBelt", this.width / 2, this.height / 2 + 64, 64, SHAPE_SQUARE, DURATION_INFINITE,
-  //    [new Effect("push", { x: 0, y: 4 }, 1, STACKING_RULE_ADD, null)], null)
+  //    [new Effect("push", { x: 0, y: 4 }, 4, STACKING_RULE_ADD, null)], null)
   //);
   //this.actors.push(new Actor("s1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
   
@@ -1189,10 +1196,11 @@ function startLevel1() {
   this.refs.boxes = [];
   this.refs.plates = [];
   let newBox, newPlate;
-  const chargeEffect = new Effect("charge", {}, 1, STACKING_RULE_ADD);
+  const chargeEffect = new Effect("charge", {}, 4, STACKING_RULE_ADD, null);
   
   this.refs.boxes = [
-    new Actor("", midX - 128, midY, 64, SHAPE_SQUARE),
+    new Actor("", midX - 128, midY - 64, 64, SHAPE_SQUARE),
+    new Actor("", midX + 128, midY - 64, 64, SHAPE_SQUARE),
   ];
   for (let box of this.refs.boxes) {
     box.attributes.box = true;
@@ -1202,7 +1210,8 @@ function startLevel1() {
   }
   
   this.refs.plates = [
-    new AoE("", midX + 128, midY + 0, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect]),
+    new AoE("", midX - 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]),
+    new AoE("", midX + 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]),
   ];
   for (let plate of this.refs.plates) {
     this.areasOfEffect.push(plate);

@@ -2,8 +2,6 @@
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /*  
@@ -168,9 +166,30 @@ var App = function () {
               var actor = _step4.value;
 
               if (this.isATouchingB(_aoe, actor)) {
-                var _actor$effects;
+                var _iteratorNormalCompletion5 = true;
+                var _didIteratorError5 = false;
+                var _iteratorError5 = undefined;
 
-                (_actor$effects = actor.effects).push.apply(_actor$effects, _toConsumableArray(_aoe.effects)); //Array.push can push multiple elements.
+                try {
+                  for (var _iterator5 = _aoe.effects[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                    var effect = _step5.value;
+
+                    actor.effects.push(effect.copy());
+                  }
+                } catch (err) {
+                  _didIteratorError5 = true;
+                  _iteratorError5 = err;
+                } finally {
+                  try {
+                    if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                      _iterator5.return();
+                    }
+                  } finally {
+                    if (_didIteratorError5) {
+                      throw _iteratorError5;
+                    }
+                  }
+                }
               }
             }
           } catch (err) {
@@ -214,30 +233,30 @@ var App = function () {
       try {
         for (var _iterator2 = this.actors[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
           var _actor = _step2.value;
-          var _iteratorNormalCompletion5 = true;
-          var _didIteratorError5 = false;
-          var _iteratorError5 = undefined;
+          var _iteratorNormalCompletion6 = true;
+          var _didIteratorError6 = false;
+          var _iteratorError6 = undefined;
 
           try {
-            for (var _iterator5 = _actor.effects[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-              var effect = _step5.value;
+            for (var _iterator6 = _actor.effects[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+              var _effect = _step6.value;
 
-              if (effect.name === "push" && _actor.canBeMoved) {
-                _actor.x += effect.data.x || 0;
-                _actor.y += effect.data.y || 0;
+              if (_effect.name === "push" && _actor.canBeMoved) {
+                _actor.x += _effect.data.x || 0;
+                _actor.y += _effect.data.y || 0;
               }
             }
           } catch (err) {
-            _didIteratorError5 = true;
-            _iteratorError5 = err;
+            _didIteratorError6 = true;
+            _iteratorError6 = err;
           } finally {
             try {
-              if (!_iteratorNormalCompletion5 && _iterator5.return) {
-                _iterator5.return();
+              if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                _iterator6.return();
               }
             } finally {
-              if (_didIteratorError5) {
-                throw _iteratorError5;
+              if (_didIteratorError6) {
+                throw _iteratorError6;
               }
             }
           }
@@ -268,7 +287,7 @@ var App = function () {
       //--------------------------------
       //Arrange sprites by vertical order.
       this.actors.sort(function (a, b) {
-        return a.bottom < b.bottom;
+        return a.bottom - b.bottom;
       });
 
       //this.paint();  //moved to run()
@@ -505,13 +524,13 @@ var App = function () {
       //DEBUG: Paint hitboxes
       //--------------------------------
       //Areas of Effects
-      var _iteratorNormalCompletion6 = true;
-      var _didIteratorError6 = false;
-      var _iteratorError6 = undefined;
+      var _iteratorNormalCompletion7 = true;
+      var _didIteratorError7 = false;
+      var _iteratorError7 = undefined;
 
       try {
-        for (var _iterator6 = this.areasOfEffect[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-          var aoe = _step6.value;
+        for (var _iterator7 = this.areasOfEffect[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+          var aoe = _step7.value;
 
           var durationPercentage = 1;
           if (!aoe.hasInfiniteDuration() && aoe.startDuration > 0) {
@@ -541,28 +560,28 @@ var App = function () {
 
         //Actors
       } catch (err) {
-        _didIteratorError6 = true;
-        _iteratorError6 = err;
+        _didIteratorError7 = true;
+        _iteratorError7 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion6 && _iterator6.return) {
-            _iterator6.return();
+          if (!_iteratorNormalCompletion7 && _iterator7.return) {
+            _iterator7.return();
           }
         } finally {
-          if (_didIteratorError6) {
-            throw _iteratorError6;
+          if (_didIteratorError7) {
+            throw _iteratorError7;
           }
         }
       }
 
       this.context2d.strokeStyle = "rgba(0,0,0,1)";
-      var _iteratorNormalCompletion7 = true;
-      var _didIteratorError7 = false;
-      var _iteratorError7 = undefined;
+      var _iteratorNormalCompletion8 = true;
+      var _didIteratorError8 = false;
+      var _iteratorError8 = undefined;
 
       try {
-        for (var _iterator7 = this.actors[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-          var actor = _step7.value;
+        for (var _iterator8 = this.actors[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+          var actor = _step8.value;
 
           switch (actor.shape) {
             case SHAPE_CIRCLE:
@@ -591,32 +610,6 @@ var App = function () {
         //--------------------------------
         //Actors
       } catch (err) {
-        _didIteratorError7 = true;
-        _iteratorError7 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion7 && _iterator7.return) {
-            _iterator7.return();
-          }
-        } finally {
-          if (_didIteratorError7) {
-            throw _iteratorError7;
-          }
-        }
-      }
-
-      var _iteratorNormalCompletion8 = true;
-      var _didIteratorError8 = false;
-      var _iteratorError8 = undefined;
-
-      try {
-        for (var _iterator8 = this.actors[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-          var _actor3 = _step8.value;
-
-          this.paintSprite(_actor3);
-        }
-        //--------------------------------
-      } catch (err) {
         _didIteratorError8 = true;
         _iteratorError8 = err;
       } finally {
@@ -627,6 +620,32 @@ var App = function () {
         } finally {
           if (_didIteratorError8) {
             throw _iteratorError8;
+          }
+        }
+      }
+
+      var _iteratorNormalCompletion9 = true;
+      var _didIteratorError9 = false;
+      var _iteratorError9 = undefined;
+
+      try {
+        for (var _iterator9 = this.actors[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+          var _actor3 = _step9.value;
+
+          this.paintSprite(_actor3);
+        }
+        //--------------------------------
+      } catch (err) {
+        _didIteratorError9 = true;
+        _iteratorError9 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion9 && _iterator9.return) {
+            _iterator9.return();
+          }
+        } finally {
+          if (_didIteratorError9) {
+            throw _iteratorError9;
           }
         }
       }
@@ -996,6 +1015,11 @@ var Effect = function () {
     value: function hasInfiniteDuration() {
       return this.startDuration === DURATION_INFINITE;
     }
+  }, {
+    key: "copy",
+    value: function copy() {
+      return new Effect(this.name, this.data, this.duration, this.stackingRule);
+    }
   }]);
 
   return Effect;
@@ -1261,7 +1285,7 @@ function initialise() {
         },
         glow: {
           loop: true,
-          steps: [{ col: 1, row: 0, duration: STEPS_PER_SECOND }, { col: 0, row: 1, duration: STEPS_PER_SECOND }, { col: 1, row: 1, duration: STEPS_PER_SECOND }]
+          steps: [{ col: 1, row: 0, duration: STEPS_PER_SECOND * 2 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 }, { col: 1, row: 1, duration: STEPS_PER_SECOND * 2 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 }]
         }
       }
     }
@@ -1274,29 +1298,29 @@ function initialise() {
     for (var animationName in animationSet.actions) {
       var animationAction = animationSet.actions[animationName];
       var newSteps = [];
-      var _iteratorNormalCompletion9 = true;
-      var _didIteratorError9 = false;
-      var _iteratorError9 = undefined;
+      var _iteratorNormalCompletion10 = true;
+      var _didIteratorError10 = false;
+      var _iteratorError10 = undefined;
 
       try {
-        for (var _iterator9 = animationAction.steps[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-          var step = _step9.value;
+        for (var _iterator10 = animationAction.steps[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+          var step = _step10.value;
 
           for (var i = 0; i < step.duration; i++) {
             newSteps.push(step);
           }
         }
       } catch (err) {
-        _didIteratorError9 = true;
-        _iteratorError9 = err;
+        _didIteratorError10 = true;
+        _iteratorError10 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion9 && _iterator9.return) {
-            _iterator9.return();
+          if (!_iteratorNormalCompletion10 && _iterator10.return) {
+            _iterator10.return();
           }
         } finally {
-          if (_didIteratorError9) {
-            throw _iteratorError9;
+          if (_didIteratorError10) {
+            throw _iteratorError10;
           }
         }
       }
@@ -1413,15 +1437,14 @@ function runAction() {
   }
 
   if (this.refs["boxes"]) {
-    var _iteratorNormalCompletion10 = true;
-    var _didIteratorError10 = false;
-    var _iteratorError10 = undefined;
+    var _iteratorNormalCompletion11 = true;
+    var _didIteratorError11 = false;
+    var _iteratorError11 = undefined;
 
     try {
-      for (var _iterator10 = this.refs["boxes"][Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-        var box = _step10.value;
+      for (var _iterator11 = this.refs["boxes"][Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+        var box = _step11.value;
 
-        console.log(box.effects.length);
         if (box.effects.find(function (eff) {
           return eff.name === "charge";
         })) {
@@ -1431,16 +1454,16 @@ function runAction() {
         }
       }
     } catch (err) {
-      _didIteratorError10 = true;
-      _iteratorError10 = err;
+      _didIteratorError11 = true;
+      _iteratorError11 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion10 && _iterator10.return) {
-          _iterator10.return();
+        if (!_iteratorNormalCompletion11 && _iterator11.return) {
+          _iterator11.return();
         }
       } finally {
-        if (_didIteratorError10) {
-          throw _iteratorError10;
+        if (_didIteratorError11) {
+          throw _iteratorError11;
         }
       }
     }
@@ -1495,7 +1518,7 @@ function startLevel1() {
   startLevelInit.apply(this);
   //this.areasOfEffect.push(
   //  new AoE("conveyorBelt", this.width / 2, this.height / 2 + 64, 64, SHAPE_SQUARE, DURATION_INFINITE,
-  //    [new Effect("push", { x: 0, y: 4 }, 1, STACKING_RULE_ADD, null)], null)
+  //    [new Effect("push", { x: 0, y: 4 }, 4, STACKING_RULE_ADD, null)], null)
   //);
   //this.actors.push(new Actor("s1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
 
@@ -1506,49 +1529,21 @@ function startLevel1() {
   this.refs.plates = [];
   var newBox = void 0,
       newPlate = void 0;
-  var chargeEffect = new Effect("charge", {}, 1, STACKING_RULE_ADD);
+  var chargeEffect = new Effect("charge", {}, 4, STACKING_RULE_ADD, null);
 
-  this.refs.boxes = [new Actor("", midX - 128, midY, 64, SHAPE_SQUARE)];
-  var _iteratorNormalCompletion11 = true;
-  var _didIteratorError11 = false;
-  var _iteratorError11 = undefined;
-
-  try {
-    for (var _iterator11 = this.refs.boxes[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-      var box = _step11.value;
-
-      box.attributes.box = true;
-      box.spritesheet = this.assets.images.box;
-      box.animationSet = this.animationSets.box;
-      this.actors.push(box);
-
-      console.log(box);
-    }
-  } catch (err) {
-    _didIteratorError11 = true;
-    _iteratorError11 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion11 && _iterator11.return) {
-        _iterator11.return();
-      }
-    } finally {
-      if (_didIteratorError11) {
-        throw _iteratorError11;
-      }
-    }
-  }
-
-  this.refs.plates = [new AoE("", midX + 128, midY + 0, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect])];
+  this.refs.boxes = [new Actor("", midX - 128, midY - 64, 64, SHAPE_SQUARE), new Actor("", midX + 128, midY - 64, 64, SHAPE_SQUARE)];
   var _iteratorNormalCompletion12 = true;
   var _didIteratorError12 = false;
   var _iteratorError12 = undefined;
 
   try {
-    for (var _iterator12 = this.refs.plates[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-      var plate = _step12.value;
+    for (var _iterator12 = this.refs.boxes[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+      var box = _step12.value;
 
-      this.areasOfEffect.push(plate);
+      box.attributes.box = true;
+      box.spritesheet = this.assets.images.box;
+      box.animationSet = this.animationSets.box;
+      this.actors.push(box);
     }
   } catch (err) {
     _didIteratorError12 = true;
@@ -1561,6 +1556,32 @@ function startLevel1() {
     } finally {
       if (_didIteratorError12) {
         throw _iteratorError12;
+      }
+    }
+  }
+
+  this.refs.plates = [new AoE("", midX - 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]), new AoE("", midX + 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()])];
+  var _iteratorNormalCompletion13 = true;
+  var _didIteratorError13 = false;
+  var _iteratorError13 = undefined;
+
+  try {
+    for (var _iterator13 = this.refs.plates[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+      var plate = _step13.value;
+
+      this.areasOfEffect.push(plate);
+    }
+  } catch (err) {
+    _didIteratorError13 = true;
+    _iteratorError13 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion13 && _iterator13.return) {
+        _iterator13.return();
+      }
+    } finally {
+      if (_didIteratorError13) {
+        throw _iteratorError13;
       }
     }
   }
@@ -1578,38 +1599,38 @@ function checkIfAllBoxesAreCharged() {
   var allBoxesAreCharged = true;
 
   if (this.refs["plates"] && this.refs["boxes"]) {
-    var _iteratorNormalCompletion13 = true;
-    var _didIteratorError13 = false;
-    var _iteratorError13 = undefined;
+    var _iteratorNormalCompletion14 = true;
+    var _didIteratorError14 = false;
+    var _iteratorError14 = undefined;
 
     try {
-      for (var _iterator13 = this.refs["plates"][Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-        var plate = _step13.value;
+      for (var _iterator14 = this.refs["plates"][Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+        var plate = _step14.value;
 
         var thisPlateIsCharged = false;
-        var _iteratorNormalCompletion14 = true;
-        var _didIteratorError14 = false;
-        var _iteratorError14 = undefined;
+        var _iteratorNormalCompletion15 = true;
+        var _didIteratorError15 = false;
+        var _iteratorError15 = undefined;
 
         try {
-          for (var _iterator14 = this.refs["boxes"][Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-            var box = _step14.value;
+          for (var _iterator15 = this.refs["boxes"][Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+            var box = _step15.value;
 
             if (this.isATouchingB(box, plate)) {
               thisPlateIsCharged = true;
             }
           }
         } catch (err) {
-          _didIteratorError14 = true;
-          _iteratorError14 = err;
+          _didIteratorError15 = true;
+          _iteratorError15 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion14 && _iterator14.return) {
-              _iterator14.return();
+            if (!_iteratorNormalCompletion15 && _iterator15.return) {
+              _iterator15.return();
             }
           } finally {
-            if (_didIteratorError14) {
-              throw _iteratorError14;
+            if (_didIteratorError15) {
+              throw _iteratorError15;
             }
           }
         }
@@ -1617,16 +1638,16 @@ function checkIfAllBoxesAreCharged() {
         allBoxesAreCharged = allBoxesAreCharged && thisPlateIsCharged;
       }
     } catch (err) {
-      _didIteratorError13 = true;
-      _iteratorError13 = err;
+      _didIteratorError14 = true;
+      _iteratorError14 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion13 && _iterator13.return) {
-          _iterator13.return();
+        if (!_iteratorNormalCompletion14 && _iterator14.return) {
+          _iterator14.return();
         }
       } finally {
-        if (_didIteratorError13) {
-          throw _iteratorError13;
+        if (_didIteratorError14) {
+          throw _iteratorError14;
         }
       }
     }
