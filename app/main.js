@@ -39,6 +39,7 @@ var App = function () {
     this.sizeRatioY = 1;
     this.width = this.canvas.width;
     this.height = this.canvas.height;
+    this.state = null;
     //--------------------------------
 
     //Initialise Game Objects
@@ -194,6 +195,7 @@ var App = function () {
 
     //Start!
     //--------------------------------
+    this.changeState(STATE_START, loadAssets);
     this.runCycle = setInterval(this.run.bind(this), 1000 / FRAMES_PER_SECOND);
     //--------------------------------
   }
@@ -201,13 +203,45 @@ var App = function () {
   //----------------------------------------------------------------
 
   _createClass(App, [{
-    key: "run",
-    value: function run() {
-      this.run_game();
+    key: "changeState",
+    value: function changeState(state) {
+      var startScript = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
+
+      this.state = state;
+      if (startScript && typeof startScript === "function") {
+        startScript.apply(this);
+      }
     }
   }, {
-    key: "run_game",
-    value: function run_game() {
+    key: "run",
+    value: function run() {
+      switch (this.state) {
+        case STATE_START:
+          this.run_start();
+          break;
+        case STATE_END:
+          this.run_end();
+          break;
+        case STATE_ACTION:
+          this.run_action();
+          break;
+      }
+
+      this.paint();
+    }
+  }, {
+    key: "run_start",
+    value: function run_start() {
+      if (this.pointer.state === INPUT_ACTIVE || this.keys[KEY_CODES.UP].state === INPUT_ACTIVE || this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE || this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE || this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE || this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE || this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
+        this.changeState(STATE_ACTION);
+      }
+    }
+  }, {
+    key: "run_end",
+    value: function run_end() {}
+  }, {
+    key: "run_action",
+    value: function run_action() {
       //TEST: Input & Actions
       //--------------------------------
       var playerIsIdle = true;
@@ -444,7 +478,7 @@ var App = function () {
         return a.bottom < b.bottom;
       });
 
-      this.paint();
+      //this.paint();  //moved to run()
       //--------------------------------
 
       //Cleanup AoEs
@@ -631,6 +665,30 @@ var App = function () {
   }, {
     key: "paint",
     value: function paint() {
+      //Clear
+      this.context2d.clearRect(0, 0, this.width, this.height);
+
+      switch (this.state) {
+        case STATE_START:
+          this.paint_start();
+          break;
+        case STATE_END:
+          this.paint_end();
+          break;
+        case STATE_ACTION:
+          this.paint_action();
+          break;
+      }
+    }
+  }, {
+    key: "paint_start",
+    value: function paint_start() {}
+  }, {
+    key: "paint_end",
+    value: function paint_end() {}
+  }, {
+    key: "paint_action",
+    value: function paint_action() {
       //Clear
       this.context2d.clearRect(0, 0, this.width, this.height);
 
@@ -854,6 +912,10 @@ var INPUT_ACTIVE = 1;
 var INPUT_ENDED = 2;
 var INPUT_DISTANCE_SENSITIVITY = 16;
 var MAX_KEYS = 128;
+
+var STATE_START = 0;
+var STATE_ACTION = 1;
+var STATE_END = 2;
 //==============================================================================
 
 /*  Actor Class
@@ -1319,6 +1381,8 @@ window.onload = function () {
 /*  Global Scripts
  */
 //==============================================================================
+function loadAssets() {}
+
 function checkIfPlayerIsAtGoal() {
   if (this.isATouchingB(this.refs["player"], this.refs["goal"])) {
     alert("You win!");

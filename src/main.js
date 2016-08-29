@@ -29,6 +29,7 @@ class App {
     this.sizeRatioY = 1;
     this.width = this.canvas.width;
     this.height = this.canvas.height;
+    this.state = null;
     //--------------------------------
     
     //Initialise Game Objects
@@ -172,17 +173,53 @@ class App {
     
     //Start!
     //--------------------------------
+    this.changeState(STATE_START, loadAssets);
     this.runCycle = setInterval(this.run.bind(this), 1000 / FRAMES_PER_SECOND);
     //--------------------------------
   }
   
   //----------------------------------------------------------------
   
+  changeState(state, startScript = null) {
+    this.state = state;
+    if (startScript && typeof startScript === "function") {
+      startScript.apply(this);
+    }
+  }
+  
   run() {
-    this.run_game();
-  }    
+    switch (this.state) {
+      case STATE_START:
+        this.run_start();
+        break;
+      case STATE_END:
+        this.run_end();
+        break;
+      case STATE_ACTION:
+        this.run_action();
+        break;
+    }
     
-  run_game() {
+    this.paint();
+  }
+  
+  run_start() {
+    if (this.pointer.state === INPUT_ACTIVE || 
+        this.keys[KEY_CODES.UP].state === INPUT_ACTIVE ||
+        this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE ||
+        this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE ||
+        this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE ||
+        this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE ||
+        this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
+      this.changeState(STATE_ACTION);
+    }
+  }
+  
+  run_end() {
+    
+  }
+    
+  run_action() {
     //TEST: Input & Actions
     //--------------------------------
     let playerIsIdle = true;
@@ -321,7 +358,7 @@ class App {
       return a.bottom < b.bottom;
     });    
     
-    this.paint();
+    //this.paint();  //moved to run()
     //--------------------------------
     
     //Cleanup AoEs
@@ -498,6 +535,26 @@ class App {
     //Clear
     this.context2d.clearRect(0, 0, this.width, this.height);
     
+    switch (this.state) {
+      case STATE_START:
+        this.paint_start();
+        break;
+      case STATE_END:
+        this.paint_end();
+        break;
+      case STATE_ACTION:
+        this.paint_action();
+        break;
+    }
+  }
+  
+  paint_start() {}
+  paint_end() {}
+  
+  paint_action() {
+    //Clear
+    this.context2d.clearRect(0, 0, this.width, this.height);
+    
     //Pain Areas of Effects
     for (let aoe of this.areasOfEffect) {
       let durationPercentage = 1;
@@ -645,6 +702,10 @@ const INPUT_ACTIVE = 1;
 const INPUT_ENDED = 2;
 const INPUT_DISTANCE_SENSITIVITY = 16;
 const MAX_KEYS = 128;
+
+const STATE_START = 0;
+const STATE_ACTION = 1;
+const STATE_END = 2;
 //==============================================================================
 
 /*  Actor Class
@@ -1005,6 +1066,10 @@ window.onload = function() {
 /*  Global Scripts
  */
 //==============================================================================
+function loadAssets() {
+  
+}
+
 function checkIfPlayerIsAtGoal() {
   if (this.isATouchingB(this.refs["player"], this.refs["goal"])) {
     alert("You win!");
