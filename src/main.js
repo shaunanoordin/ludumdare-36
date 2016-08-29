@@ -30,21 +30,22 @@ class App {
     this.width = this.canvas.width;
     this.height = this.canvas.height;
     this.state = null;
+    this.animationSets = {};
     //--------------------------------
     
     //Initialise Game Objects
     //--------------------------------
     this.assets = {
-      images: {
-        actor: new ImageAsset("assets/actor.png"),
-      }
+      images: {}
+    }
+    this.assetsLoaded = true;
+    this.scripts = {
+      onRun: [checkIfPlayerIsAtGoal],
     }
     this.actors = [];
     this.areasOfEffect = [];
     this.refs = {};
-    this.scripts = {
-      onRun: [checkIfPlayerIsAtGoal],
-    }
+    this.store = {};
     //--------------------------------
     
     //Prepare Input
@@ -89,88 +90,6 @@ class App {
     this.updateSize();
     //--------------------------------
     
-    //TEST: ANIMATIONS
-    //--------------------------------
-    const STEPS_PER_SECOND = FRAMES_PER_SECOND / 10;
-    this.animationSets = {
-      "actor": {
-        "tileWidth": 64,
-        "tileHeight": 64,
-        "tileOffsetX": 0,
-        "tileOffsetY": -16,        
-        "actions": {
-          "idle": {
-            "loop": true,
-            "steps": [
-              { row: 0, duration: STEPS_PER_SECOND }
-            ],
-          },
-          "walk": {
-            "tileWidth": 64,
-            "tileHeight": 64,
-            "tileOffsetX": 0,
-            "tileOffsetY": 0,
-            "loop": true,
-            "steps": [
-              { row: 1, duration: STEPS_PER_SECOND },
-              { row: 2, duration: STEPS_PER_SECOND },
-              { row: 3, duration: STEPS_PER_SECOND },
-              { row: 2, duration: STEPS_PER_SECOND },
-            ],
-          },
-        },
-      },
-    };
-    
-    //Process Animations; expand steps to many frames per steps.
-    for (let animationTitle in this.animationSets) {
-      let animationSet = this.animationSets[animationTitle];
-      for (let animationName in animationSet.actions) {
-        let animationAction = animationSet.actions[animationName];
-        let newSteps = [];
-        for (let step of animationAction.steps) {
-          for (let i = 0; i < step.duration; i++) { newSteps.push(step); }
-        }
-        animationAction.steps = newSteps;
-      }
-    }
-    //--------------------------------
-    
-    
-    //TEST: In-Game Objects
-    //--------------------------------
-    this.refs["player"] = new Actor("player", this.width / 2, this.height / 2, 32, SHAPE_CIRCLE, true);
-    this.refs["player"].spritesheet = new ImageAsset("assets/actor.png");
-    this.refs["player"].animationStep = 0;
-    this.refs["player"].animationSet = this.animationSets["actor"];
-    this.actors.push(this.refs["player"]);
-    
-    this.actors.push(new Actor("s1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
-    this.actors.push(new Actor("s2", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
-    this.actors.push(new Actor("c1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_CIRCLE));
-    this.actors.push(new Actor("c2", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_CIRCLE));
-    
-    let wallN = new Actor("wallN", this.width / 2, this.height * -0.65, this.width, SHAPE_SQUARE);
-    let wallS = new Actor("wallS", this.width / 2, this.height * +1.65, this.width, SHAPE_SQUARE);
-    let wallE = new Actor("wallE", this.width * +1.35, this.height / 2, this.height, SHAPE_SQUARE);
-    let wallW = new Actor("wallW", this.width * -0.35, this.height / 2, this.height, SHAPE_SQUARE);
-    //let wallE = new Actor();
-    //let wallW = new Actor();
-    wallE.canBeMoved = false;
-    wallS.canBeMoved = false;
-    wallW.canBeMoved = false;
-    wallN.canBeMoved = false;
-    this.actors.push(wallE, wallS, wallW, wallN);
-    
-    this.areasOfEffect.push(
-      new AoE("conveyorBelt", this.width / 2, this.height / 2 + 64, 64, SHAPE_SQUARE, DURATION_INFINITE,
-        [new Effect("push", { x: 0, y: 4 }, 1, STACKING_RULE_ADD, null)], null)
-    );
-    
-    this.refs["goal"] = new AoE("goal", this.width / 2, this.height / 2 - 256, 64, SHAPE_SQUARE, DURATION_INFINITE, [], null);
-    this.areasOfEffect.push(this.refs["goal"]);
-    //--------------------------------
-    
     //Start!
     //--------------------------------
     this.changeState(STATE_START, loadAssets);
@@ -204,6 +123,14 @@ class App {
   }
   
   run_start() {
+    this.assetsLoaded = true;
+    for (let category in this.assets) {
+      for (let asset in this.assets[category]) {
+        this.assetsLoaded = this.assetsLoaded && this.assets[category][asset].loaded;
+      }
+    }
+    if (!this.assetsLoaded) return;
+    
     if (this.pointer.state === INPUT_ACTIVE || 
         this.keys[KEY_CODES.UP].state === INPUT_ACTIVE ||
         this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE ||
@@ -211,7 +138,7 @@ class App {
         this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE ||
         this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE ||
         this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
-      this.changeState(STATE_ACTION);
+      this.changeState(STATE_ACTION, startLevel1);
     }
   }
   
@@ -548,13 +475,25 @@ class App {
     }
   }
   
-  paint_start() {}
+  paint_start() {
+    if (this.assetsLoaded) {
+      this.context2d.beginPath();
+      this.context2d.rect(0, 0, this.width, this.height);
+      this.context2d.fillStyle = "#c33";
+      this.context2d.fill();
+      this.context2d.closePath();
+    } else {
+      this.context2d.beginPath();
+      this.context2d.rect(0, 0, this.width, this.height);
+      this.context2d.fillStyle = "#333";
+      this.context2d.fill();
+      this.context2d.closePath();
+    }
+    
+  }
   paint_end() {}
   
   paint_action() {
-    //Clear
-    this.context2d.clearRect(0, 0, this.width, this.height);
-    
     //Pain Areas of Effects
     for (let aoe of this.areasOfEffect) {
       let durationPercentage = 1;
@@ -1067,7 +1006,96 @@ window.onload = function() {
  */
 //==============================================================================
 function loadAssets() {
+  this.assets.images.actor = new ImageAsset("assets/actor.png");
   
+  //TEST: ANIMATIONS
+  //--------------------------------
+  const STEPS_PER_SECOND = FRAMES_PER_SECOND / 10;
+  this.animationSets = {
+    "actor": {
+      "tileWidth": 64,
+      "tileHeight": 64,
+      "tileOffsetX": 0,
+      "tileOffsetY": -16,        
+      "actions": {
+        "idle": {
+          "loop": true,
+          "steps": [
+            { row: 0, duration: STEPS_PER_SECOND }
+          ],
+        },
+        "walk": {
+          "tileWidth": 64,
+          "tileHeight": 64,
+          "tileOffsetX": 0,
+          "tileOffsetY": 0,
+          "loop": true,
+          "steps": [
+            { row: 1, duration: STEPS_PER_SECOND },
+            { row: 2, duration: STEPS_PER_SECOND },
+            { row: 3, duration: STEPS_PER_SECOND },
+            { row: 2, duration: STEPS_PER_SECOND },
+          ],
+        },
+      },
+    },
+  };
+  
+  //Process Animations; expand steps to many frames per steps.
+  for (let animationTitle in this.animationSets) {
+    let animationSet = this.animationSets[animationTitle];
+    for (let animationName in animationSet.actions) {
+      let animationAction = animationSet.actions[animationName];
+      let newSteps = [];
+      for (let step of animationAction.steps) {
+        for (let i = 0; i < step.duration; i++) { newSteps.push(step); }
+      }
+      animationAction.steps = newSteps;
+    }
+  }
+  //--------------------------------
+  
+  console.log(this.animationSets);
+}
+
+function startLevel1() {
+  //Reset  
+  this.actors = [];
+  this.areasOfEffect = [];
+  this.refs = {};
+  this.store = {};  
+  
+  this.refs["player"] = new Actor("player", this.width / 2, this.height / 2, 32, SHAPE_CIRCLE, true);
+  this.refs["player"].spritesheet = new ImageAsset("assets/actor.png");
+  this.refs["player"].animationStep = 0;
+  this.refs["player"].animationSet = this.animationSets["actor"];
+  this.actors.push(this.refs["player"]);
+  
+  this.actors.push(new Actor("s1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
+  this.actors.push(new Actor("s2", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_SQUARE));
+  this.actors.push(new Actor("c1", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_CIRCLE));
+  this.actors.push(new Actor("c2", Math.floor(Math.random() * this.width * 0.8) + this.width * 0.1, Math.floor(Math.random() * this.height * 0.8) + this.height * 0.1, 32 + Math.random() * 64, SHAPE_CIRCLE));
+  
+  let wallN = new Actor("wallN", this.width / 2, this.height * -0.65, this.width, SHAPE_SQUARE);
+  let wallS = new Actor("wallS", this.width / 2, this.height * +1.65, this.width, SHAPE_SQUARE);
+  let wallE = new Actor("wallE", this.width * +1.35, this.height / 2, this.height, SHAPE_SQUARE);
+  let wallW = new Actor("wallW", this.width * -0.35, this.height / 2, this.height, SHAPE_SQUARE);
+  //let wallE = new Actor();
+  //let wallW = new Actor();
+  wallE.canBeMoved = false;
+  wallS.canBeMoved = false;
+  wallW.canBeMoved = false;
+  wallN.canBeMoved = false;
+  this.actors.push(wallE, wallS, wallW, wallN);
+  
+  this.areasOfEffect.push(
+    new AoE("conveyorBelt", this.width / 2, this.height / 2 + 64, 64, SHAPE_SQUARE, DURATION_INFINITE,
+      [new Effect("push", { x: 0, y: 4 }, 1, STACKING_RULE_ADD, null)], null)
+  );
+  
+  this.refs["goal"] = new AoE("goal", this.width / 2, this.height / 2 - 256, 64, SHAPE_SQUARE, DURATION_INFINITE, [], null);
+  this.areasOfEffect.push(this.refs["goal"]);
+  //--------------------------------  
 }
 
 function checkIfPlayerIsAtGoal() {
