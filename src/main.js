@@ -10,14 +10,7 @@ AvO Adventure Game
  */
 //==============================================================================
 class App {
-  constructor() {
-    //Bind functions to 'this' reference.
-    //--------------------------------
-    //this.run = this.run.bind(this);
-    //this.physics = this.physics.bind(this);
-    //this.paint = this.paint.bind(this);
-    //--------------------------------
-
+  constructor(startScript) {
     //Initialise properties
     //--------------------------------
     this.runCycle = undefined;
@@ -40,7 +33,10 @@ class App {
     }
     this.assetsLoaded = true;
     this.scripts = {
-      onRun: [checkIfPlayerIsAtGoal],
+      run: null,
+      runStart: null,
+      runAction: null,
+      runEnd: null,
     }
     this.actors = [];
     this.areasOfEffect = [];
@@ -62,7 +58,7 @@ class App {
       now: { x: 0, y: 0 },
       state: INPUT_IDLE,
       duration: 0
-    }
+    };
     //--------------------------------
     
     //Bind Events
@@ -92,21 +88,23 @@ class App {
     
     //Start!
     //--------------------------------
-    this.changeState(STATE_START, loadAssets);
+    this.changeState(STATE_START, startScript);
     this.runCycle = setInterval(this.run.bind(this), 1000 / FRAMES_PER_SECOND);
     //--------------------------------
   }
   
   //----------------------------------------------------------------
   
-  changeState(state, startScript = null) {
+  changeState(state, script = null) {
     this.state = state;
-    if (startScript && typeof startScript === "function") {
-      startScript.apply(this);
+    if (script && typeof script === "function") {
+      script.apply(this);
     }
   }
   
   run() {
+    if (this.scripts.run) this.scripts.run.apply(this);
+    
     switch (this.state) {
       case STATE_START:
         this.run_start();
@@ -123,130 +121,17 @@ class App {
   }
   
   run_start() {
-    this.assetsLoaded = true;
-    for (let category in this.assets) {
-      for (let asset in this.assets[category]) {
-        this.assetsLoaded = this.assetsLoaded && this.assets[category][asset].loaded;
-      }
-    }
-    if (!this.assetsLoaded) return;
-    
-    if (this.pointer.state === INPUT_ACTIVE || 
-        this.keys[KEY_CODES.UP].state === INPUT_ACTIVE ||
-        this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE ||
-        this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE ||
-        this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE ||
-        this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE ||
-        this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
-      this.changeState(STATE_ACTION, startLevel1);
-    }
+    if (this.scripts.runStart) this.scripts.runStart.apply(this);
   }
   
   run_end() {
-    
+    if (this.scripts.runEnd) this.scripts.runEnd.apply(this);
   }
     
   run_action() {
-    //TEST: Input & Actions
-    //--------------------------------
-    let playerIsIdle = true;
-    const PLAYER_SPEED = 4;
-    if (this.pointer.state === INPUT_ACTIVE) {
-      const distX = this.pointer.now.x - this.pointer.start.x;
-      const distY = this.pointer.now.y - this.pointer.start.y;
-      const dist = Math.sqrt(distX * distX + distY * distY);
-      
-      if (dist >= INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY) {
-        const angle = Math.atan2(distY, distX);
-        const speed = PLAYER_SPEED;
-        this.refs["player"].x += Math.cos(angle) * speed;
-        this.refs["player"].y += Math.sin(angle) * speed;
-        this.refs["player"].rotation = angle;
-        playerIsIdle = false;
-        
-        //UX improvement: reset the base point of the pointer so the player can
-        //switch directions much more easily.
-        if (dist >= INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2) {
-          this.pointer.start.x = this.pointer.now.x - Math.cos(angle) *
-            INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2;
-          this.pointer.start.y = this.pointer.now.y - Math.sin(angle) *
-            INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2;
-        }
-      }
-    }
-    
-    if (this.keys[KEY_CODES.UP].state === INPUT_ACTIVE && this.keys[KEY_CODES.DOWN].state !== INPUT_ACTIVE) {
-      this.refs["player"].y -= PLAYER_SPEED;
-      this.refs["player"].direction = DIRECTION_NORTH;
-      playerIsIdle = false;
-    } else if (this.keys[KEY_CODES.UP].state !== INPUT_ACTIVE && this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE) {
-      this.refs["player"].y += PLAYER_SPEED;
-      this.refs["player"].direction = DIRECTION_SOUTH;
-      playerIsIdle = false;
-    }
-    if (this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE && this.keys[KEY_CODES.RIGHT].state !== INPUT_ACTIVE) {
-      this.refs["player"].x -= PLAYER_SPEED;
-      this.refs["player"].direction = DIRECTION_WEST;
-      playerIsIdle = false;
-    } else if (this.keys[KEY_CODES.LEFT].state !== INPUT_ACTIVE && this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE) {
-      this.refs["player"].x += PLAYER_SPEED;
-      this.refs["player"].direction = DIRECTION_EAST;
-      playerIsIdle = false;
-    }
-    
-    if (this.keys[KEY_CODES.A].state === INPUT_ACTIVE && this.keys[KEY_CODES.D].state !== INPUT_ACTIVE) {
-      this.refs["player"].rotation -= Math.PI / 36;
-      playerIsIdle = false;
-    } else if (this.keys[KEY_CODES.A].state !== INPUT_ACTIVE && this.keys[KEY_CODES.D].state === INPUT_ACTIVE) {
-      this.refs["player"].rotation += Math.PI / 36;
-      playerIsIdle = false;
-    }
-    
-    if (this.keys[KEY_CODES.W].state === INPUT_ACTIVE) {
-      this.refs["player"].x += Math.cos(this.refs["player"].rotation) * PLAYER_SPEED;
-      this.refs["player"].y += Math.sin(this.refs["player"].rotation) * PLAYER_SPEED;
-      playerIsIdle = false;
-    } else if (this.keys[KEY_CODES.S].state === INPUT_ACTIVE) {
-      this.refs["player"].x -= Math.cos(this.refs["player"].rotation) * PLAYER_SPEED;
-      this.refs["player"].y -= Math.sin(this.refs["player"].rotation) * PLAYER_SPEED;
-      playerIsIdle = false;
-    }
-    
-    if (this.keys[KEY_CODES.Z].duration === 1) {
-      this.refs["player"].shape = (this.refs["player"].shape === SHAPE_CIRCLE)
-        ? SHAPE_SQUARE
-        : SHAPE_CIRCLE;
-    }
-    
-    if (this.keys[KEY_CODES.SPACE].duration === 1) {
-      const PUSH_POWER = 12;
-      const AOE_SIZE = this.refs["player"].size;
-      let distance = this.refs["player"].radius + AOE_SIZE / 2;
-      let x = this.refs["player"].x + Math.cos(this.refs["player"].rotation) * distance;
-      let y = this.refs["player"].y + Math.sin(this.refs["player"].rotation) * distance;;
-      let newAoE = new AoE("", x, y, AOE_SIZE, SHAPE_CIRCLE, 5,
-        [
-          new Effect("push",
-            { x: Math.cos(this.refs["player"].rotation) * PUSH_POWER, y: Math.sin(this.refs["player"].rotation) * PUSH_POWER },
-            2, STACKING_RULE_ADD, this.refs["player"])
-        ],
-        this.refs["player"]);
-      this.areasOfEffect.push(newAoE);
-    }
-    
-    //Try animation!
-    if (playerIsIdle) {
-      this.refs["player"].playAnimation("idle");
-    } else {
-      this.refs["player"].playAnimation("walk");
-    }
-    //--------------------------------
-    
     //Run Global Scripts
     //--------------------------------
-    for (let script of this.scripts.onRun) {
-      script.apply(this);
-    }
+    if (this.scripts.runAction) this.scripts.runAction.apply(this);
     //--------------------------------
     
     //AoEs apply Effects
@@ -276,7 +161,6 @@ class App {
     //--------------------------------
     this.physics();
     //--------------------------------
-    
     
     //Visuals
     //--------------------------------
@@ -489,12 +373,17 @@ class App {
       this.context2d.fill();
       this.context2d.closePath();
     }
-    
   }
-  paint_end() {}
+  paint_end() {
+    this.context2d.beginPath();
+    this.context2d.rect(0, 0, this.width, this.height);
+    this.context2d.fillStyle = "#3cc";
+    this.context2d.fill();
+    this.context2d.closePath();    
+  }
   
   paint_action() {
-    //Pain Areas of Effects
+    //Paint Areas of Effects
     for (let aoe of this.areasOfEffect) {
       let durationPercentage = 1;
       if (!aoe.hasInfiniteDuration() && aoe.startDuration > 0) {
@@ -552,7 +441,6 @@ class App {
           !actor.animationSet || !actor.animationSet.actions[actor.animationName])
         continue;
       
-      //TEST
       const animationSet = actor.animationSet;
       const srcW = animationSet.tileWidth;
       const srcH = animationSet.tileHeight;
@@ -997,7 +885,7 @@ function ImageAsset(url) {
 //==============================================================================
 var app;
 window.onload = function() {
-  window.app = new App();
+  window.app = new App(initialise);
 };
 //==============================================================================
 
@@ -1005,10 +893,20 @@ window.onload = function() {
 /*  Global Scripts
  */
 //==============================================================================
-function loadAssets() {
-  this.assets.images.actor = new ImageAsset("assets/actor.png");
+function initialise() {
+  //Scripts
+  //--------------------------------
+  this.scripts.runStart = runStart;
+  this.scripts.runAction = runAction;
+  this.scripts.runEnd = runEnd;
+  //--------------------------------
   
-  //TEST: ANIMATIONS
+  //Images
+  //--------------------------------
+  this.assets.images.actor = new ImageAsset("assets/actor.png");
+  //--------------------------------
+  
+  //Animations
   //--------------------------------
   const STEPS_PER_SECOND = FRAMES_PER_SECOND / 10;
   this.animationSets = {
@@ -1054,16 +952,138 @@ function loadAssets() {
     }
   }
   //--------------------------------
+}
+
+function runStart() {
+  this.assetsLoaded = true;
+  for (let category in this.assets) {
+    for (let asset in this.assets[category]) {
+      this.assetsLoaded = this.assetsLoaded && this.assets[category][asset].loaded;
+    }
+  }
+  if (!this.assetsLoaded) return;
   
-  console.log(this.animationSets);
+  this.store.level = 1;
+  
+  if (this.pointer.state === INPUT_ACTIVE || 
+      this.keys[KEY_CODES.UP].state === INPUT_ACTIVE ||
+      this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE ||
+      this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE ||
+      this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE ||
+      this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE ||
+      this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
+    this.changeState(STATE_ACTION, startLevel1);
+  }
+}
+
+function runEnd() {}
+
+function runAction() {
+  //Input & Actions
+  //--------------------------------
+  let playerIsIdle = true;
+  const PLAYER_SPEED = 4;
+  if (this.pointer.state === INPUT_ACTIVE) {
+    const distX = this.pointer.now.x - this.pointer.start.x;
+    const distY = this.pointer.now.y - this.pointer.start.y;
+    const dist = Math.sqrt(distX * distX + distY * distY);
+    
+    if (dist >= INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY) {
+      const angle = Math.atan2(distY, distX);
+      const speed = PLAYER_SPEED;
+      this.refs["player"].x += Math.cos(angle) * speed;
+      this.refs["player"].y += Math.sin(angle) * speed;
+      this.refs["player"].rotation = angle;
+      playerIsIdle = false;
+      
+      //UX improvement: reset the base point of the pointer so the player can
+      //switch directions much more easily.
+      if (dist >= INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2) {
+        this.pointer.start.x = this.pointer.now.x - Math.cos(angle) *
+          INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2;
+        this.pointer.start.y = this.pointer.now.y - Math.sin(angle) *
+          INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2;
+      }
+    }
+  }
+  
+  if (this.keys[KEY_CODES.UP].state === INPUT_ACTIVE && this.keys[KEY_CODES.DOWN].state !== INPUT_ACTIVE) {
+    this.refs["player"].y -= PLAYER_SPEED;
+    this.refs["player"].direction = DIRECTION_NORTH;
+    playerIsIdle = false;
+  } else if (this.keys[KEY_CODES.UP].state !== INPUT_ACTIVE && this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE) {
+    this.refs["player"].y += PLAYER_SPEED;
+    this.refs["player"].direction = DIRECTION_SOUTH;
+    playerIsIdle = false;
+  }
+  if (this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE && this.keys[KEY_CODES.RIGHT].state !== INPUT_ACTIVE) {
+    this.refs["player"].x -= PLAYER_SPEED;
+    this.refs["player"].direction = DIRECTION_WEST;
+    playerIsIdle = false;
+  } else if (this.keys[KEY_CODES.LEFT].state !== INPUT_ACTIVE && this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE) {
+    this.refs["player"].x += PLAYER_SPEED;
+    this.refs["player"].direction = DIRECTION_EAST;
+    playerIsIdle = false;
+  }
+  
+  if (this.keys[KEY_CODES.A].state === INPUT_ACTIVE && this.keys[KEY_CODES.D].state !== INPUT_ACTIVE) {
+    this.refs["player"].rotation -= Math.PI / 36;
+    playerIsIdle = false;
+  } else if (this.keys[KEY_CODES.A].state !== INPUT_ACTIVE && this.keys[KEY_CODES.D].state === INPUT_ACTIVE) {
+    this.refs["player"].rotation += Math.PI / 36;
+    playerIsIdle = false;
+  }
+  
+  if (this.keys[KEY_CODES.W].state === INPUT_ACTIVE) {
+    this.refs["player"].x += Math.cos(this.refs["player"].rotation) * PLAYER_SPEED;
+    this.refs["player"].y += Math.sin(this.refs["player"].rotation) * PLAYER_SPEED;
+    playerIsIdle = false;
+  } else if (this.keys[KEY_CODES.S].state === INPUT_ACTIVE) {
+    this.refs["player"].x -= Math.cos(this.refs["player"].rotation) * PLAYER_SPEED;
+    this.refs["player"].y -= Math.sin(this.refs["player"].rotation) * PLAYER_SPEED;
+    playerIsIdle = false;
+  }
+  
+  if (this.keys[KEY_CODES.Z].duration === 1) {
+    this.refs["player"].shape = (this.refs["player"].shape === SHAPE_CIRCLE)
+      ? SHAPE_SQUARE
+      : SHAPE_CIRCLE;
+  }
+  
+  if (this.keys[KEY_CODES.SPACE].duration === 1) {
+    const PUSH_POWER = 12;
+    const AOE_SIZE = this.refs["player"].size;
+    let distance = this.refs["player"].radius + AOE_SIZE / 2;
+    let x = this.refs["player"].x + Math.cos(this.refs["player"].rotation) * distance;
+    let y = this.refs["player"].y + Math.sin(this.refs["player"].rotation) * distance;;
+    let newAoE = new AoE("", x, y, AOE_SIZE, SHAPE_CIRCLE, 5,
+      [
+        new Effect("push",
+          { x: Math.cos(this.refs["player"].rotation) * PUSH_POWER, y: Math.sin(this.refs["player"].rotation) * PUSH_POWER },
+          2, STACKING_RULE_ADD, this.refs["player"])
+      ],
+      this.refs["player"]);
+    this.areasOfEffect.push(newAoE);
+  }
+  
+  //Try animation!
+  if (playerIsIdle) {
+    this.refs["player"].playAnimation("idle");
+  } else {
+    this.refs["player"].playAnimation("walk");
+  }
+  //--------------------------------
+  
+  //Win Condition
+  //--------------------------------
+  checkIfPlayerIsAtGoal.apply(this);
+  //--------------------------------
 }
 
 function startLevel1() {
-  //Reset  
+  //Reset
   this.actors = [];
   this.areasOfEffect = [];
-  this.refs = {};
-  this.store = {};  
   
   this.refs["player"] = new Actor("player", this.width / 2, this.height / 2, 32, SHAPE_CIRCLE, true);
   this.refs["player"].spritesheet = new ImageAsset("assets/actor.png");
@@ -1100,8 +1120,17 @@ function startLevel1() {
 
 function checkIfPlayerIsAtGoal() {
   if (this.isATouchingB(this.refs["player"], this.refs["goal"])) {
-    alert("You win!");
-    clearInterval(this.runCycle);    
+    this.store.level && this.store.level++;
+    
+    switch (this.store.level) {
+      case 1:
+      case 2:
+      case 3:
+        startLevel1.apply(this);
+        break;
+      default:
+        this.changeState(STATE_END);
+    }    
   }
 }
 //==============================================================================

@@ -18,15 +18,8 @@ AvO Adventure Game
  */
 //==============================================================================
 var App = function () {
-  function App() {
+  function App(startScript) {
     _classCallCheck(this, App);
-
-    //Bind functions to 'this' reference.
-    //--------------------------------
-    //this.run = this.run.bind(this);
-    //this.physics = this.physics.bind(this);
-    //this.paint = this.paint.bind(this);
-    //--------------------------------
 
     //Initialise properties
     //--------------------------------
@@ -50,7 +43,10 @@ var App = function () {
     };
     this.assetsLoaded = true;
     this.scripts = {
-      onRun: [checkIfPlayerIsAtGoal]
+      run: null,
+      runStart: null,
+      runAction: null,
+      runEnd: null
     };
     this.actors = [];
     this.areasOfEffect = [];
@@ -100,7 +96,7 @@ var App = function () {
 
     //Start!
     //--------------------------------
-    this.changeState(STATE_START, loadAssets);
+    this.changeState(STATE_START, startScript);
     this.runCycle = setInterval(this.run.bind(this), 1000 / FRAMES_PER_SECOND);
     //--------------------------------
   }
@@ -110,16 +106,18 @@ var App = function () {
   _createClass(App, [{
     key: "changeState",
     value: function changeState(state) {
-      var startScript = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
+      var script = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
 
       this.state = state;
-      if (startScript && typeof startScript === "function") {
-        startScript.apply(this);
+      if (script && typeof script === "function") {
+        script.apply(this);
       }
     }
   }, {
     key: "run",
     value: function run() {
+      if (this.scripts.run) this.scripts.run.apply(this);
+
       switch (this.state) {
         case STATE_START:
           this.run_start();
@@ -137,124 +135,62 @@ var App = function () {
   }, {
     key: "run_start",
     value: function run_start() {
-      this.assetsLoaded = true;
-      for (var category in this.assets) {
-        for (var asset in this.assets[category]) {
-          this.assetsLoaded = this.assetsLoaded && this.assets[category][asset].loaded;
-        }
-      }
-      if (!this.assetsLoaded) return;
-
-      if (this.pointer.state === INPUT_ACTIVE || this.keys[KEY_CODES.UP].state === INPUT_ACTIVE || this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE || this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE || this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE || this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE || this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
-        this.changeState(STATE_ACTION, startLevel1);
-      }
+      if (this.scripts.runStart) this.scripts.runStart.apply(this);
     }
   }, {
     key: "run_end",
-    value: function run_end() {}
+    value: function run_end() {
+      if (this.scripts.runEnd) this.scripts.runEnd.apply(this);
+    }
   }, {
     key: "run_action",
     value: function run_action() {
-      //TEST: Input & Actions
-      //--------------------------------
-      var playerIsIdle = true;
-      var PLAYER_SPEED = 4;
-      if (this.pointer.state === INPUT_ACTIVE) {
-        var distX = this.pointer.now.x - this.pointer.start.x;
-        var distY = this.pointer.now.y - this.pointer.start.y;
-        var dist = Math.sqrt(distX * distX + distY * distY);
-
-        if (dist >= INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY) {
-          var angle = Math.atan2(distY, distX);
-          var speed = PLAYER_SPEED;
-          this.refs["player"].x += Math.cos(angle) * speed;
-          this.refs["player"].y += Math.sin(angle) * speed;
-          this.refs["player"].rotation = angle;
-          playerIsIdle = false;
-
-          //UX improvement: reset the base point of the pointer so the player can
-          //switch directions much more easily.
-          if (dist >= INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2) {
-            this.pointer.start.x = this.pointer.now.x - Math.cos(angle) * INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2;
-            this.pointer.start.y = this.pointer.now.y - Math.sin(angle) * INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2;
-          }
-        }
-      }
-
-      if (this.keys[KEY_CODES.UP].state === INPUT_ACTIVE && this.keys[KEY_CODES.DOWN].state !== INPUT_ACTIVE) {
-        this.refs["player"].y -= PLAYER_SPEED;
-        this.refs["player"].direction = DIRECTION_NORTH;
-        playerIsIdle = false;
-      } else if (this.keys[KEY_CODES.UP].state !== INPUT_ACTIVE && this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE) {
-        this.refs["player"].y += PLAYER_SPEED;
-        this.refs["player"].direction = DIRECTION_SOUTH;
-        playerIsIdle = false;
-      }
-      if (this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE && this.keys[KEY_CODES.RIGHT].state !== INPUT_ACTIVE) {
-        this.refs["player"].x -= PLAYER_SPEED;
-        this.refs["player"].direction = DIRECTION_WEST;
-        playerIsIdle = false;
-      } else if (this.keys[KEY_CODES.LEFT].state !== INPUT_ACTIVE && this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE) {
-        this.refs["player"].x += PLAYER_SPEED;
-        this.refs["player"].direction = DIRECTION_EAST;
-        playerIsIdle = false;
-      }
-
-      if (this.keys[KEY_CODES.A].state === INPUT_ACTIVE && this.keys[KEY_CODES.D].state !== INPUT_ACTIVE) {
-        this.refs["player"].rotation -= Math.PI / 36;
-        playerIsIdle = false;
-      } else if (this.keys[KEY_CODES.A].state !== INPUT_ACTIVE && this.keys[KEY_CODES.D].state === INPUT_ACTIVE) {
-        this.refs["player"].rotation += Math.PI / 36;
-        playerIsIdle = false;
-      }
-
-      if (this.keys[KEY_CODES.W].state === INPUT_ACTIVE) {
-        this.refs["player"].x += Math.cos(this.refs["player"].rotation) * PLAYER_SPEED;
-        this.refs["player"].y += Math.sin(this.refs["player"].rotation) * PLAYER_SPEED;
-        playerIsIdle = false;
-      } else if (this.keys[KEY_CODES.S].state === INPUT_ACTIVE) {
-        this.refs["player"].x -= Math.cos(this.refs["player"].rotation) * PLAYER_SPEED;
-        this.refs["player"].y -= Math.sin(this.refs["player"].rotation) * PLAYER_SPEED;
-        playerIsIdle = false;
-      }
-
-      if (this.keys[KEY_CODES.Z].duration === 1) {
-        this.refs["player"].shape = this.refs["player"].shape === SHAPE_CIRCLE ? SHAPE_SQUARE : SHAPE_CIRCLE;
-      }
-
-      if (this.keys[KEY_CODES.SPACE].duration === 1) {
-        var PUSH_POWER = 12;
-        var AOE_SIZE = this.refs["player"].size;
-        var distance = this.refs["player"].radius + AOE_SIZE / 2;
-        var x = this.refs["player"].x + Math.cos(this.refs["player"].rotation) * distance;
-        var y = this.refs["player"].y + Math.sin(this.refs["player"].rotation) * distance;;
-        var newAoE = new AoE("", x, y, AOE_SIZE, SHAPE_CIRCLE, 5, [new Effect("push", { x: Math.cos(this.refs["player"].rotation) * PUSH_POWER, y: Math.sin(this.refs["player"].rotation) * PUSH_POWER }, 2, STACKING_RULE_ADD, this.refs["player"])], this.refs["player"]);
-        this.areasOfEffect.push(newAoE);
-      }
-
-      //Try animation!
-      if (playerIsIdle) {
-        this.refs["player"].playAnimation("idle");
-      } else {
-        this.refs["player"].playAnimation("walk");
-      }
-      //--------------------------------
-
       //Run Global Scripts
+      //--------------------------------
+      if (this.scripts.runAction) this.scripts.runAction.apply(this);
+      //--------------------------------
+
+      //AoEs apply Effects
       //--------------------------------
       var _iteratorNormalCompletion = true;
       var _didIteratorError = false;
       var _iteratorError = undefined;
 
       try {
-        for (var _iterator = this.scripts.onRun[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var script = _step.value;
+        for (var _iterator = this.areasOfEffect[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var _aoe = _step.value;
+          var _iteratorNormalCompletion4 = true;
+          var _didIteratorError4 = false;
+          var _iteratorError4 = undefined;
 
-          script.apply(this);
+          try {
+            for (var _iterator4 = this.actors[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+              var actor = _step4.value;
+
+              if (this.isATouchingB(_aoe, actor)) {
+                var _actor$effects;
+
+                (_actor$effects = actor.effects).push.apply(_actor$effects, _toConsumableArray(_aoe.effects)); //Array.push can push multiple elements.
+              }
+            }
+          } catch (err) {
+            _didIteratorError4 = true;
+            _iteratorError4 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                _iterator4.return();
+              }
+            } finally {
+              if (_didIteratorError4) {
+                throw _iteratorError4;
+              }
+            }
+          }
         }
         //--------------------------------
 
-        //AoEs apply Effects
+        //Actors react to Effects
         //--------------------------------
       } catch (err) {
         _didIteratorError = true;
@@ -276,20 +212,19 @@ var App = function () {
       var _iteratorError2 = undefined;
 
       try {
-        for (var _iterator2 = this.areasOfEffect[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-          var _aoe = _step2.value;
+        for (var _iterator2 = this.actors[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var _actor = _step2.value;
           var _iteratorNormalCompletion5 = true;
           var _didIteratorError5 = false;
           var _iteratorError5 = undefined;
 
           try {
-            for (var _iterator5 = this.actors[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-              var actor = _step5.value;
+            for (var _iterator5 = _actor.effects[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+              var effect = _step5.value;
 
-              if (this.isATouchingB(_aoe, actor)) {
-                var _actor$effects;
-
-                (_actor$effects = actor.effects).push.apply(_actor$effects, _toConsumableArray(_aoe.effects)); //Array.push can push multiple elements.
+              if (effect.name === "push" && _actor.canBeMoved) {
+                _actor.x += effect.data.x || 0;
+                _actor.y += effect.data.y || 0;
               }
             }
           } catch (err) {
@@ -309,7 +244,7 @@ var App = function () {
         }
         //--------------------------------
 
-        //Actors react to Effects
+        //Physics
         //--------------------------------
       } catch (err) {
         _didIteratorError2 = true;
@@ -326,63 +261,8 @@ var App = function () {
         }
       }
 
-      var _iteratorNormalCompletion3 = true;
-      var _didIteratorError3 = false;
-      var _iteratorError3 = undefined;
-
-      try {
-        for (var _iterator3 = this.actors[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-          var _actor = _step3.value;
-          var _iteratorNormalCompletion6 = true;
-          var _didIteratorError6 = false;
-          var _iteratorError6 = undefined;
-
-          try {
-            for (var _iterator6 = _actor.effects[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-              var effect = _step6.value;
-
-              if (effect.name === "push" && _actor.canBeMoved) {
-                _actor.x += effect.data.x || 0;
-                _actor.y += effect.data.y || 0;
-              }
-            }
-          } catch (err) {
-            _didIteratorError6 = true;
-            _iteratorError6 = err;
-          } finally {
-            try {
-              if (!_iteratorNormalCompletion6 && _iterator6.return) {
-                _iterator6.return();
-              }
-            } finally {
-              if (_didIteratorError6) {
-                throw _iteratorError6;
-              }
-            }
-          }
-        }
-        //--------------------------------
-
-        //Physics
-        //--------------------------------
-      } catch (err) {
-        _didIteratorError3 = true;
-        _iteratorError3 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion3 && _iterator3.return) {
-            _iterator3.return();
-          }
-        } finally {
-          if (_didIteratorError3) {
-            throw _iteratorError3;
-          }
-        }
-      }
-
       this.physics();
       //--------------------------------
-
 
       //Visuals
       //--------------------------------
@@ -409,13 +289,13 @@ var App = function () {
 
       //Cleanup Effects
       //--------------------------------
-      var _iteratorNormalCompletion4 = true;
-      var _didIteratorError4 = false;
-      var _iteratorError4 = undefined;
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
 
       try {
-        for (var _iterator4 = this.actors[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-          var _actor2 = _step4.value;
+        for (var _iterator3 = this.actors[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var _actor2 = _step3.value;
 
           for (var _i2 = _actor2.effects.length - 1; _i2 >= 0; _i2--) {
             if (!_actor2.effects[_i2].hasInfiniteDuration()) {
@@ -431,16 +311,16 @@ var App = function () {
         //Cleanup Input
         //--------------------------------
       } catch (err) {
-        _didIteratorError4 = true;
-        _iteratorError4 = err;
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion4 && _iterator4.return) {
-            _iterator4.return();
+          if (!_iteratorNormalCompletion3 && _iterator3.return) {
+            _iterator3.return();
           }
         } finally {
-          if (_didIteratorError4) {
-            throw _iteratorError4;
+          if (_didIteratorError3) {
+            throw _iteratorError3;
           }
         }
       }
@@ -612,18 +492,24 @@ var App = function () {
     }
   }, {
     key: "paint_end",
-    value: function paint_end() {}
+    value: function paint_end() {
+      this.context2d.beginPath();
+      this.context2d.rect(0, 0, this.width, this.height);
+      this.context2d.fillStyle = "#3cc";
+      this.context2d.fill();
+      this.context2d.closePath();
+    }
   }, {
     key: "paint_action",
     value: function paint_action() {
-      //Pain Areas of Effects
-      var _iteratorNormalCompletion7 = true;
-      var _didIteratorError7 = false;
-      var _iteratorError7 = undefined;
+      //Paint Areas of Effects
+      var _iteratorNormalCompletion6 = true;
+      var _didIteratorError6 = false;
+      var _iteratorError6 = undefined;
 
       try {
-        for (var _iterator7 = this.areasOfEffect[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-          var aoe = _step7.value;
+        for (var _iterator6 = this.areasOfEffect[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+          var aoe = _step6.value;
 
           var durationPercentage = 1;
           if (!aoe.hasInfiniteDuration() && aoe.startDuration > 0) {
@@ -653,28 +539,28 @@ var App = function () {
 
         //Paint Actor hitboxes
       } catch (err) {
-        _didIteratorError7 = true;
-        _iteratorError7 = err;
+        _didIteratorError6 = true;
+        _iteratorError6 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion7 && _iterator7.return) {
-            _iterator7.return();
+          if (!_iteratorNormalCompletion6 && _iterator6.return) {
+            _iterator6.return();
           }
         } finally {
-          if (_didIteratorError7) {
-            throw _iteratorError7;
+          if (_didIteratorError6) {
+            throw _iteratorError6;
           }
         }
       }
 
       this.context2d.strokeStyle = "rgba(0,0,0,1)";
-      var _iteratorNormalCompletion8 = true;
-      var _didIteratorError8 = false;
-      var _iteratorError8 = undefined;
+      var _iteratorNormalCompletion7 = true;
+      var _didIteratorError7 = false;
+      var _iteratorError7 = undefined;
 
       try {
-        for (var _iterator8 = this.actors[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-          var actor = _step8.value;
+        for (var _iterator7 = this.actors[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+          var actor = _step7.value;
 
           switch (actor.shape) {
             case SHAPE_CIRCLE:
@@ -699,31 +585,30 @@ var App = function () {
 
         //Paint sprites
       } catch (err) {
-        _didIteratorError8 = true;
-        _iteratorError8 = err;
+        _didIteratorError7 = true;
+        _iteratorError7 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion8 && _iterator8.return) {
-            _iterator8.return();
+          if (!_iteratorNormalCompletion7 && _iterator7.return) {
+            _iterator7.return();
           }
         } finally {
-          if (_didIteratorError8) {
-            throw _iteratorError8;
+          if (_didIteratorError7) {
+            throw _iteratorError7;
           }
         }
       }
 
-      var _iteratorNormalCompletion9 = true;
-      var _didIteratorError9 = false;
-      var _iteratorError9 = undefined;
+      var _iteratorNormalCompletion8 = true;
+      var _didIteratorError8 = false;
+      var _iteratorError8 = undefined;
 
       try {
-        for (var _iterator9 = this.actors[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-          var _actor3 = _step9.value;
+        for (var _iterator8 = this.actors[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+          var _actor3 = _step8.value;
 
           if (!_actor3.spritesheet || !_actor3.spritesheet.loaded || !_actor3.animationSet || !_actor3.animationSet.actions[_actor3.animationName]) continue;
 
-          //TEST
           var animationSet = _actor3.animationSet;
           var srcW = animationSet.tileWidth;
           var srcH = animationSet.tileHeight;
@@ -737,16 +622,16 @@ var App = function () {
           this.context2d.drawImage(_actor3.spritesheet.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
         }
       } catch (err) {
-        _didIteratorError9 = true;
-        _iteratorError9 = err;
+        _didIteratorError8 = true;
+        _iteratorError8 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion9 && _iterator9.return) {
-            _iterator9.return();
+          if (!_iteratorNormalCompletion8 && _iterator8.return) {
+            _iterator8.return();
           }
         } finally {
-          if (_didIteratorError9) {
-            throw _iteratorError9;
+          if (_didIteratorError8) {
+            throw _iteratorError8;
           }
         }
       }
@@ -1297,7 +1182,7 @@ function ImageAsset(url) {
 //==============================================================================
 var app;
 window.onload = function () {
-  window.app = new App();
+  window.app = new App(initialise);
 };
 //==============================================================================
 
@@ -1305,10 +1190,20 @@ window.onload = function () {
 /*  Global Scripts
  */
 //==============================================================================
-function loadAssets() {
-  this.assets.images.actor = new ImageAsset("assets/actor.png");
+function initialise() {
+  //Scripts
+  //--------------------------------
+  this.scripts.runStart = runStart;
+  this.scripts.runAction = runAction;
+  this.scripts.runEnd = runEnd;
+  //--------------------------------
 
-  //TEST: ANIMATIONS
+  //Images
+  //--------------------------------
+  this.assets.images.actor = new ImageAsset("assets/actor.png");
+  //--------------------------------
+
+  //Animations
   //--------------------------------
   var STEPS_PER_SECOND = FRAMES_PER_SECOND / 10;
   this.animationSets = {
@@ -1340,29 +1235,29 @@ function loadAssets() {
     for (var animationName in animationSet.actions) {
       var animationAction = animationSet.actions[animationName];
       var newSteps = [];
-      var _iteratorNormalCompletion10 = true;
-      var _didIteratorError10 = false;
-      var _iteratorError10 = undefined;
+      var _iteratorNormalCompletion9 = true;
+      var _didIteratorError9 = false;
+      var _iteratorError9 = undefined;
 
       try {
-        for (var _iterator10 = animationAction.steps[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-          var step = _step10.value;
+        for (var _iterator9 = animationAction.steps[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+          var step = _step9.value;
 
           for (var i = 0; i < step.duration; i++) {
             newSteps.push(step);
           }
         }
       } catch (err) {
-        _didIteratorError10 = true;
-        _iteratorError10 = err;
+        _didIteratorError9 = true;
+        _iteratorError9 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion10 && _iterator10.return) {
-            _iterator10.return();
+          if (!_iteratorNormalCompletion9 && _iterator9.return) {
+            _iterator9.return();
           }
         } finally {
-          if (_didIteratorError10) {
-            throw _iteratorError10;
+          if (_didIteratorError9) {
+            throw _iteratorError9;
           }
         }
       }
@@ -1371,16 +1266,122 @@ function loadAssets() {
     }
   }
   //--------------------------------
+}
 
-  console.log(this.animationSets);
+function runStart() {
+  this.assetsLoaded = true;
+  for (var category in this.assets) {
+    for (var asset in this.assets[category]) {
+      this.assetsLoaded = this.assetsLoaded && this.assets[category][asset].loaded;
+    }
+  }
+  if (!this.assetsLoaded) return;
+
+  this.store.level = 1;
+
+  if (this.pointer.state === INPUT_ACTIVE || this.keys[KEY_CODES.UP].state === INPUT_ACTIVE || this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE || this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE || this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE || this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE || this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
+    this.changeState(STATE_ACTION, startLevel1);
+  }
+}
+
+function runEnd() {}
+
+function runAction() {
+  //Input & Actions
+  //--------------------------------
+  var playerIsIdle = true;
+  var PLAYER_SPEED = 4;
+  if (this.pointer.state === INPUT_ACTIVE) {
+    var distX = this.pointer.now.x - this.pointer.start.x;
+    var distY = this.pointer.now.y - this.pointer.start.y;
+    var dist = Math.sqrt(distX * distX + distY * distY);
+
+    if (dist >= INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY) {
+      var angle = Math.atan2(distY, distX);
+      var speed = PLAYER_SPEED;
+      this.refs["player"].x += Math.cos(angle) * speed;
+      this.refs["player"].y += Math.sin(angle) * speed;
+      this.refs["player"].rotation = angle;
+      playerIsIdle = false;
+
+      //UX improvement: reset the base point of the pointer so the player can
+      //switch directions much more easily.
+      if (dist >= INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2) {
+        this.pointer.start.x = this.pointer.now.x - Math.cos(angle) * INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2;
+        this.pointer.start.y = this.pointer.now.y - Math.sin(angle) * INPUT_DISTANCE_SENSITIVITY * this.sizeRatioY * 2;
+      }
+    }
+  }
+
+  if (this.keys[KEY_CODES.UP].state === INPUT_ACTIVE && this.keys[KEY_CODES.DOWN].state !== INPUT_ACTIVE) {
+    this.refs["player"].y -= PLAYER_SPEED;
+    this.refs["player"].direction = DIRECTION_NORTH;
+    playerIsIdle = false;
+  } else if (this.keys[KEY_CODES.UP].state !== INPUT_ACTIVE && this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE) {
+    this.refs["player"].y += PLAYER_SPEED;
+    this.refs["player"].direction = DIRECTION_SOUTH;
+    playerIsIdle = false;
+  }
+  if (this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE && this.keys[KEY_CODES.RIGHT].state !== INPUT_ACTIVE) {
+    this.refs["player"].x -= PLAYER_SPEED;
+    this.refs["player"].direction = DIRECTION_WEST;
+    playerIsIdle = false;
+  } else if (this.keys[KEY_CODES.LEFT].state !== INPUT_ACTIVE && this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE) {
+    this.refs["player"].x += PLAYER_SPEED;
+    this.refs["player"].direction = DIRECTION_EAST;
+    playerIsIdle = false;
+  }
+
+  if (this.keys[KEY_CODES.A].state === INPUT_ACTIVE && this.keys[KEY_CODES.D].state !== INPUT_ACTIVE) {
+    this.refs["player"].rotation -= Math.PI / 36;
+    playerIsIdle = false;
+  } else if (this.keys[KEY_CODES.A].state !== INPUT_ACTIVE && this.keys[KEY_CODES.D].state === INPUT_ACTIVE) {
+    this.refs["player"].rotation += Math.PI / 36;
+    playerIsIdle = false;
+  }
+
+  if (this.keys[KEY_CODES.W].state === INPUT_ACTIVE) {
+    this.refs["player"].x += Math.cos(this.refs["player"].rotation) * PLAYER_SPEED;
+    this.refs["player"].y += Math.sin(this.refs["player"].rotation) * PLAYER_SPEED;
+    playerIsIdle = false;
+  } else if (this.keys[KEY_CODES.S].state === INPUT_ACTIVE) {
+    this.refs["player"].x -= Math.cos(this.refs["player"].rotation) * PLAYER_SPEED;
+    this.refs["player"].y -= Math.sin(this.refs["player"].rotation) * PLAYER_SPEED;
+    playerIsIdle = false;
+  }
+
+  if (this.keys[KEY_CODES.Z].duration === 1) {
+    this.refs["player"].shape = this.refs["player"].shape === SHAPE_CIRCLE ? SHAPE_SQUARE : SHAPE_CIRCLE;
+  }
+
+  if (this.keys[KEY_CODES.SPACE].duration === 1) {
+    var PUSH_POWER = 12;
+    var AOE_SIZE = this.refs["player"].size;
+    var distance = this.refs["player"].radius + AOE_SIZE / 2;
+    var x = this.refs["player"].x + Math.cos(this.refs["player"].rotation) * distance;
+    var y = this.refs["player"].y + Math.sin(this.refs["player"].rotation) * distance;;
+    var newAoE = new AoE("", x, y, AOE_SIZE, SHAPE_CIRCLE, 5, [new Effect("push", { x: Math.cos(this.refs["player"].rotation) * PUSH_POWER, y: Math.sin(this.refs["player"].rotation) * PUSH_POWER }, 2, STACKING_RULE_ADD, this.refs["player"])], this.refs["player"]);
+    this.areasOfEffect.push(newAoE);
+  }
+
+  //Try animation!
+  if (playerIsIdle) {
+    this.refs["player"].playAnimation("idle");
+  } else {
+    this.refs["player"].playAnimation("walk");
+  }
+  //--------------------------------
+
+  //Win Condition
+  //--------------------------------
+  checkIfPlayerIsAtGoal.apply(this);
+  //--------------------------------
 }
 
 function startLevel1() {
-  //Reset  
+  //Reset
   this.actors = [];
   this.areasOfEffect = [];
-  this.refs = {};
-  this.store = {};
 
   this.refs["player"] = new Actor("player", this.width / 2, this.height / 2, 32, SHAPE_CIRCLE, true);
   this.refs["player"].spritesheet = new ImageAsset("assets/actor.png");
@@ -1414,8 +1415,17 @@ function startLevel1() {
 
 function checkIfPlayerIsAtGoal() {
   if (this.isATouchingB(this.refs["player"], this.refs["goal"])) {
-    alert("You win!");
-    clearInterval(this.runCycle);
+    this.store.level && this.store.level++;
+
+    switch (this.store.level) {
+      case 1:
+      case 2:
+      case 3:
+        startLevel1.apply(this);
+        break;
+      default:
+        this.changeState(STATE_END);
+    }
   }
 }
 //==============================================================================
