@@ -13,6 +13,7 @@ class App {
   constructor(startScript) {
     //Initialise properties
     //--------------------------------
+    this.debugMode = true;
     this.runCycle = undefined;
     this.html = document.getElementById("app");
     this.canvas = document.getElementById("canvas");
@@ -387,66 +388,75 @@ class App {
   paint_action() {
     //DEBUG: Paint hitboxes
     //--------------------------------
-    //Areas of Effects
-    for (let aoe of this.areasOfEffect) {
-      let durationPercentage = 1;
-      if (!aoe.hasInfiniteDuration() && aoe.startDuration > 0) {
-        durationPercentage = Math.max(0, aoe.duration / aoe.startDuration);
+    if (this.debugMode) {
+      //Areas of Effects
+      for (let aoe of this.areasOfEffect) {
+        let durationPercentage = 1;
+        if (!aoe.hasInfiniteDuration() && aoe.startDuration > 0) {
+          durationPercentage = Math.max(0, aoe.duration / aoe.startDuration);
+        }
+        this.context2d.strokeStyle = "rgba(204,51,51,"+durationPercentage+")";
+        
+        switch (aoe.shape) {
+          case SHAPE_CIRCLE:
+            this.context2d.beginPath();
+            this.context2d.arc(aoe.x, aoe.y, aoe.size / 2, 0, 2 * Math.PI);
+            this.context2d.stroke();
+            this.context2d.closePath();
+            this.context2d.beginPath();
+            this.context2d.moveTo(aoe.x, aoe.y);
+            this.context2d.stroke();
+            this.context2d.closePath();
+            break;
+          case SHAPE_SQUARE:
+            this.context2d.beginPath();
+            this.context2d.rect(aoe.x - aoe.size / 2, aoe.y - aoe.size / 2, aoe.size, aoe.size);
+            this.context2d.stroke();
+            this.context2d.closePath();
+            break;
+        }
       }
-      this.context2d.strokeStyle = "rgba(204,51,51,"+durationPercentage+")";
       
-      switch (aoe.shape) {
-        case SHAPE_CIRCLE:
-          this.context2d.beginPath();
-          this.context2d.arc(aoe.x, aoe.y, aoe.size / 2, 0, 2 * Math.PI);
-          this.context2d.stroke();
-          this.context2d.closePath();
-          this.context2d.beginPath();
-          this.context2d.moveTo(aoe.x, aoe.y);
-          this.context2d.stroke();
-          this.context2d.closePath();
-          break;
-        case SHAPE_SQUARE:
-          this.context2d.beginPath();
-          this.context2d.rect(aoe.x - aoe.size / 2, aoe.y - aoe.size / 2, aoe.size, aoe.size);
-          this.context2d.stroke();
-          this.context2d.closePath();
-          break;
+      //Actors
+      this.context2d.strokeStyle = "rgba(0,0,0,1)";
+      for (let actor of this.actors) {
+        switch (actor.shape) {
+          case SHAPE_CIRCLE:
+            this.context2d.beginPath();
+            this.context2d.arc(actor.x, actor.y, actor.size / 2, 0, 2 * Math.PI);
+            this.context2d.stroke();
+            this.context2d.closePath();
+            this.context2d.beginPath();
+            this.context2d.moveTo(actor.x, actor.y);
+            this.context2d.lineTo(actor.x + Math.cos(actor.rotation) * actor.size, actor.y + Math.sin(actor.rotation) * actor.size);
+            this.context2d.stroke();
+            this.context2d.closePath();
+            break;
+          case SHAPE_SQUARE:
+            this.context2d.beginPath();
+            this.context2d.rect(actor.x - actor.size / 2, actor.y - actor.size / 2, actor.size, actor.size);
+            this.context2d.stroke();
+            this.context2d.closePath();
+            break;
+        }
       }
     }
-    
-    //Actors
-    this.context2d.strokeStyle = "rgba(0,0,0,1)";
-    for (let actor of this.actors) {
-      switch (actor.shape) {
-        case SHAPE_CIRCLE:
-          this.context2d.beginPath();
-          this.context2d.arc(actor.x, actor.y, actor.size / 2, 0, 2 * Math.PI);
-          this.context2d.stroke();
-          this.context2d.closePath();
-          this.context2d.beginPath();
-          this.context2d.moveTo(actor.x, actor.y);
-          this.context2d.lineTo(actor.x + Math.cos(actor.rotation) * actor.size, actor.y + Math.sin(actor.rotation) * actor.size);
-          this.context2d.stroke();
-          this.context2d.closePath();
-          break;
-        case SHAPE_SQUARE:
-          this.context2d.beginPath();
-          this.context2d.rect(actor.x - actor.size / 2, actor.y - actor.size / 2, actor.size, actor.size);
-          this.context2d.stroke();
-          this.context2d.closePath();
-          break;
-      }
-    }
-    
+    //--------------------------------
     
     //Paint sprites
     //TODO: IMPROVE
     //TODO: Layering
     //--------------------------------
+    //AoEs
+    for (let aoe of this.areasOfEffect) {
+      this.paintSprite(aoe);
+      aoe.nextAnimationFrame();
+    }
+    
     //Actors
     for (let actor of this.actors) {
       this.paintSprite(actor);
+      actor.nextAnimationFrame();
     }
     //--------------------------------
   }
@@ -584,27 +594,6 @@ class Actor {
     this.effects = [];
   }
   
-  playAnimation(animationName = "", restart = false) {
-    if (!this.animationSet || !this.animationSet.actions[animationName]) return;
-    
-    //let animationSet = this.animationSet[animationName];
-    let animationAction = this.animationSet.actions[animationName];
-    
-    if (restart || this.animationName !== animationName) {  //Set this as the new animation
-      this.animationStep = 0;
-      this.animationName = animationName;
-    } else {  //Take a step through the current animation
-      this.animationStep++;
-      if (animationAction.steps.length === 0) {
-        this.animationStep = 0;
-      } else if (animationAction.loop) {
-        while (this.animationStep >= animationAction.steps.length) this.animationStep -= animationAction.steps.length;
-      } else {
-        this.animationStep = animationAction.steps.length - 1;
-      }
-    }
-  }
-  
   get left() { return this.x - this.size / 2; }
   get right() { return this.x + this.size / 2; }
   get top() { return this.y - this.size / 2; }
@@ -638,6 +627,29 @@ class Actor {
       case DIRECTION_NORTH:
         this._rotation = ROTATION_NORTH;
         break;
+    }
+  }
+  
+  setAnimation(animationName = "", restart = false) {
+    if (!this.animationSet || !this.animationSet.actions[animationName]) return;
+    
+    if (restart || this.animationName !== animationName) {  //Set this as the new animation
+      this.animationStep = 0;
+      this.animationName = animationName;
+    }
+  }
+  
+  nextAnimationFrame() {
+    if (!this.animationSet || !this.animationSet.actions[this.animationName]) return;
+    
+    let animationAction = this.animationSet.actions[this.animationName];
+    this.animationStep++;
+    if (animationAction.steps.length === 0) {
+      this.animationStep = 0;
+    } else if (animationAction.loop) {
+      while (this.animationStep >= animationAction.steps.length) this.animationStep -= animationAction.steps.length;
+    } else {
+      this.animationStep = animationAction.steps.length - 1;
     }
   }
 }
@@ -685,6 +697,29 @@ class AoE {
   
   hasInfiniteDuration() {
     return this.startDuration === DURATION_INFINITE;
+  }
+  
+  setAnimation(animationName = "", restart = false) {
+    if (!this.animationSet || !this.animationSet.actions[animationName]) return;
+    
+    if (restart || this.animationName !== animationName) {  //Set this as the new animation
+      this.animationStep = 0;
+      this.animationName = animationName;
+    }
+  }
+  
+  nextAnimationFrame() {
+    if (!this.animationSet || !this.animationSet.actions[this.animationName]) return;
+    
+    let animationAction = this.animationSet.actions[this.animationName];
+    this.animationStep++;
+    if (animationAction.steps.length === 0) {
+      this.animationStep = 0;
+    } else if (animationAction.loop) {
+      while (this.animationStep >= animationAction.steps.length) this.animationStep -= animationAction.steps.length;
+    } else {
+      this.animationStep = animationAction.steps.length - 1;
+    }
   }
 }
 
@@ -934,7 +969,10 @@ function initialise() {
   //Images
   //--------------------------------
   this.assets.images.actor = new ImageAsset("assets/actor.png");
-  this.assets.images.box = new ImageAsset("assets/box.png");
+  this.assets.images.sarcophagus = new ImageAsset("assets/sarcophagus.png");
+  this.assets.images.gate = new ImageAsset("assets/gate.png");
+  this.assets.images.plate = new ImageAsset("assets/plate.png");
+  this.assets.images.goal = new ImageAsset("assets/goal.png");
   //--------------------------------
   
   //Animations
@@ -986,6 +1024,63 @@ function initialise() {
             { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 },
             { col: 1, row: 1, duration: STEPS_PER_SECOND * 2 },
             { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 },
+          ],
+        },
+      },
+    },
+    
+    sarcophagus: {
+      rule: ANIMATION_RULE_BASIC,
+      tileWidth: 64,
+      tileHeight: 128,
+      tileOffsetX: 0,
+      tileOffsetY: -32,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [
+            { col: 0, row: 0, duration: 1 }
+          ],
+        },
+        glow: {
+          loop: true,
+          steps: [
+            { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 },
+            { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 },
+            { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 },
+            { col: 1, row: 1, duration: STEPS_PER_SECOND * 4 },
+          ],
+        },
+      },
+    },
+    
+    simple128: {
+      rule: ANIMATION_RULE_BASIC,
+      tileWidth: 128,
+      tileHeight: 128,
+      tileOffsetX: 0,
+      tileOffsetY: 0,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [
+            { col: 0, row: 0, duration: 1 }
+          ],
+        },
+      },
+    },
+    
+    simple64: {
+      rule: ANIMATION_RULE_BASIC,
+      tileWidth: 64,
+      tileHeight: 64,
+      tileOffsetX: 0,
+      tileOffsetY: 0,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [
+            { col: 0, row: 0, duration: 1 }
           ],
         },
       },
@@ -1124,17 +1219,17 @@ function runAction() {
   //Animations
   //--------------------------------
   if (playerIsIdle) {
-    this.refs["player"].playAnimation("idle");
+    this.refs["player"].setAnimation("idle");
   } else {
-    this.refs["player"].playAnimation("walk");
+    this.refs["player"].setAnimation("walk");
   }
   
   if (this.refs["boxes"]) {
     for (let box of this.refs["boxes"]) {
       if (box.effects.find((eff) => { return eff.name === "charge" })) {
-        box.playAnimation("glow");
+        box.setAnimation("glow");
       } else {
-        box.playAnimation("idle");
+        box.setAnimation("idle");
       }
     }
   }
@@ -1177,9 +1272,15 @@ function startLevelInit() {
 
   this.refs["gate"] = new Actor("gate", midX, 16, 128, SHAPE_SQUARE);
   this.refs["gate"].canBeMoved = false;
+  this.refs["gate"].spritesheet = this.assets.images.gate;
+  this.refs["gate"].animationSet = this.animationSets.simple128;
+  this.refs["gate"].setAnimation("idle");
   this.actors.push(this.refs["gate"]);
   
   this.refs["goal"] = new AoE("goal", this.width / 2, 32, 64, SHAPE_SQUARE, DURATION_INFINITE, []);
+  this.refs["goal"].spritesheet = this.assets.images.goal;
+  this.refs["goal"].animationSet = this.animationSets.simple64;
+  this.refs["goal"].setAnimation("idle");
   this.areasOfEffect.push(this.refs["goal"]);
 }
 
@@ -1204,8 +1305,8 @@ function startLevel1() {
   ];
   for (let box of this.refs.boxes) {
     box.attributes.box = true;
-    box.spritesheet = this.assets.images.box;
-    box.animationSet = this.animationSets.box;
+    box.spritesheet = this.assets.images.sarcophagus;
+    box.animationSet = this.animationSets.sarcophagus;
     this.actors.push(box);
   }
   
@@ -1214,6 +1315,9 @@ function startLevel1() {
     new AoE("", midX + 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]),
   ];
   for (let plate of this.refs.plates) {
+    plate.spritesheet = this.assets.images.goal;
+    plate.animationSet = this.animationSets.simple64;
+    plate.setAnimation("idle");
     this.areasOfEffect.push(plate);
   }
 }
@@ -1245,7 +1349,12 @@ function checkIfAllBoxesAreCharged() {
     if (this.refs["gate"] && this.refs["gate"].y >= -32) {
       this.refs["gate"].x = this.width / 2 - 1 + Math.random() * 2;
       this.refs["gate"].y -= 1;
-    }  
+    }
+  } else {
+    if (this.refs["gate"] && this.refs["gate"].y <= 16) {
+      this.refs["gate"].x = this.width / 2 - 1 + Math.random() * 2;
+      this.refs["gate"].y += 1;
+    }
   }
 }
 

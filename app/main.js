@@ -21,6 +21,7 @@ var App = function () {
 
     //Initialise properties
     //--------------------------------
+    this.debugMode = true;
     this.runCycle = undefined;
     this.html = document.getElementById("app");
     this.canvas = document.getElementById("canvas");
@@ -523,118 +524,122 @@ var App = function () {
     value: function paint_action() {
       //DEBUG: Paint hitboxes
       //--------------------------------
-      //Areas of Effects
-      var _iteratorNormalCompletion7 = true;
-      var _didIteratorError7 = false;
-      var _iteratorError7 = undefined;
+      if (this.debugMode) {
+        //Areas of Effects
+        var _iteratorNormalCompletion7 = true;
+        var _didIteratorError7 = false;
+        var _iteratorError7 = undefined;
 
-      try {
-        for (var _iterator7 = this.areasOfEffect[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-          var aoe = _step7.value;
+        try {
+          for (var _iterator7 = this.areasOfEffect[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+            var aoe = _step7.value;
 
-          var durationPercentage = 1;
-          if (!aoe.hasInfiniteDuration() && aoe.startDuration > 0) {
-            durationPercentage = Math.max(0, aoe.duration / aoe.startDuration);
+            var durationPercentage = 1;
+            if (!aoe.hasInfiniteDuration() && aoe.startDuration > 0) {
+              durationPercentage = Math.max(0, aoe.duration / aoe.startDuration);
+            }
+            this.context2d.strokeStyle = "rgba(204,51,51," + durationPercentage + ")";
+
+            switch (aoe.shape) {
+              case SHAPE_CIRCLE:
+                this.context2d.beginPath();
+                this.context2d.arc(aoe.x, aoe.y, aoe.size / 2, 0, 2 * Math.PI);
+                this.context2d.stroke();
+                this.context2d.closePath();
+                this.context2d.beginPath();
+                this.context2d.moveTo(aoe.x, aoe.y);
+                this.context2d.stroke();
+                this.context2d.closePath();
+                break;
+              case SHAPE_SQUARE:
+                this.context2d.beginPath();
+                this.context2d.rect(aoe.x - aoe.size / 2, aoe.y - aoe.size / 2, aoe.size, aoe.size);
+                this.context2d.stroke();
+                this.context2d.closePath();
+                break;
+            }
           }
-          this.context2d.strokeStyle = "rgba(204,51,51," + durationPercentage + ")";
 
-          switch (aoe.shape) {
-            case SHAPE_CIRCLE:
-              this.context2d.beginPath();
-              this.context2d.arc(aoe.x, aoe.y, aoe.size / 2, 0, 2 * Math.PI);
-              this.context2d.stroke();
-              this.context2d.closePath();
-              this.context2d.beginPath();
-              this.context2d.moveTo(aoe.x, aoe.y);
-              this.context2d.stroke();
-              this.context2d.closePath();
-              break;
-            case SHAPE_SQUARE:
-              this.context2d.beginPath();
-              this.context2d.rect(aoe.x - aoe.size / 2, aoe.y - aoe.size / 2, aoe.size, aoe.size);
-              this.context2d.stroke();
-              this.context2d.closePath();
-              break;
+          //Actors
+        } catch (err) {
+          _didIteratorError7 = true;
+          _iteratorError7 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion7 && _iterator7.return) {
+              _iterator7.return();
+            }
+          } finally {
+            if (_didIteratorError7) {
+              throw _iteratorError7;
+            }
           }
         }
 
-        //Actors
-      } catch (err) {
-        _didIteratorError7 = true;
-        _iteratorError7 = err;
-      } finally {
+        this.context2d.strokeStyle = "rgba(0,0,0,1)";
+        var _iteratorNormalCompletion8 = true;
+        var _didIteratorError8 = false;
+        var _iteratorError8 = undefined;
+
         try {
-          if (!_iteratorNormalCompletion7 && _iterator7.return) {
-            _iterator7.return();
+          for (var _iterator8 = this.actors[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+            var actor = _step8.value;
+
+            switch (actor.shape) {
+              case SHAPE_CIRCLE:
+                this.context2d.beginPath();
+                this.context2d.arc(actor.x, actor.y, actor.size / 2, 0, 2 * Math.PI);
+                this.context2d.stroke();
+                this.context2d.closePath();
+                this.context2d.beginPath();
+                this.context2d.moveTo(actor.x, actor.y);
+                this.context2d.lineTo(actor.x + Math.cos(actor.rotation) * actor.size, actor.y + Math.sin(actor.rotation) * actor.size);
+                this.context2d.stroke();
+                this.context2d.closePath();
+                break;
+              case SHAPE_SQUARE:
+                this.context2d.beginPath();
+                this.context2d.rect(actor.x - actor.size / 2, actor.y - actor.size / 2, actor.size, actor.size);
+                this.context2d.stroke();
+                this.context2d.closePath();
+                break;
+            }
           }
+        } catch (err) {
+          _didIteratorError8 = true;
+          _iteratorError8 = err;
         } finally {
-          if (_didIteratorError7) {
-            throw _iteratorError7;
+          try {
+            if (!_iteratorNormalCompletion8 && _iterator8.return) {
+              _iterator8.return();
+            }
+          } finally {
+            if (_didIteratorError8) {
+              throw _iteratorError8;
+            }
           }
         }
       }
+      //--------------------------------
 
-      this.context2d.strokeStyle = "rgba(0,0,0,1)";
-      var _iteratorNormalCompletion8 = true;
-      var _didIteratorError8 = false;
-      var _iteratorError8 = undefined;
-
-      try {
-        for (var _iterator8 = this.actors[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-          var actor = _step8.value;
-
-          switch (actor.shape) {
-            case SHAPE_CIRCLE:
-              this.context2d.beginPath();
-              this.context2d.arc(actor.x, actor.y, actor.size / 2, 0, 2 * Math.PI);
-              this.context2d.stroke();
-              this.context2d.closePath();
-              this.context2d.beginPath();
-              this.context2d.moveTo(actor.x, actor.y);
-              this.context2d.lineTo(actor.x + Math.cos(actor.rotation) * actor.size, actor.y + Math.sin(actor.rotation) * actor.size);
-              this.context2d.stroke();
-              this.context2d.closePath();
-              break;
-            case SHAPE_SQUARE:
-              this.context2d.beginPath();
-              this.context2d.rect(actor.x - actor.size / 2, actor.y - actor.size / 2, actor.size, actor.size);
-              this.context2d.stroke();
-              this.context2d.closePath();
-              break;
-          }
-        }
-
-        //Paint sprites
-        //TODO: IMPROVE
-        //TODO: Layering
-        //--------------------------------
-        //Actors
-      } catch (err) {
-        _didIteratorError8 = true;
-        _iteratorError8 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion8 && _iterator8.return) {
-            _iterator8.return();
-          }
-        } finally {
-          if (_didIteratorError8) {
-            throw _iteratorError8;
-          }
-        }
-      }
-
+      //Paint sprites
+      //TODO: IMPROVE
+      //TODO: Layering
+      //--------------------------------
+      //AoEs
       var _iteratorNormalCompletion9 = true;
       var _didIteratorError9 = false;
       var _iteratorError9 = undefined;
 
       try {
-        for (var _iterator9 = this.actors[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-          var _actor3 = _step9.value;
+        for (var _iterator9 = this.areasOfEffect[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+          var _aoe2 = _step9.value;
 
-          this.paintSprite(_actor3);
+          this.paintSprite(_aoe2);
+          _aoe2.nextAnimationFrame();
         }
-        //--------------------------------
+
+        //Actors
       } catch (err) {
         _didIteratorError9 = true;
         _iteratorError9 = err;
@@ -646,6 +651,33 @@ var App = function () {
         } finally {
           if (_didIteratorError9) {
             throw _iteratorError9;
+          }
+        }
+      }
+
+      var _iteratorNormalCompletion10 = true;
+      var _didIteratorError10 = false;
+      var _iteratorError10 = undefined;
+
+      try {
+        for (var _iterator10 = this.actors[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+          var _actor3 = _step10.value;
+
+          this.paintSprite(_actor3);
+          _actor3.nextAnimationFrame();
+        }
+        //--------------------------------
+      } catch (err) {
+        _didIteratorError10 = true;
+        _iteratorError10 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion10 && _iterator10.return) {
+            _iterator10.return();
+          }
+        } finally {
+          if (_didIteratorError10) {
+            throw _iteratorError10;
           }
         }
       }
@@ -803,32 +835,34 @@ var Actor = function () {
   }
 
   _createClass(Actor, [{
-    key: "playAnimation",
-    value: function playAnimation() {
+    key: "setAnimation",
+    value: function setAnimation() {
       var animationName = arguments.length <= 0 || arguments[0] === undefined ? "" : arguments[0];
       var restart = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
 
       if (!this.animationSet || !this.animationSet.actions[animationName]) return;
 
-      //let animationSet = this.animationSet[animationName];
-      var animationAction = this.animationSet.actions[animationName];
-
       if (restart || this.animationName !== animationName) {
         //Set this as the new animation
         this.animationStep = 0;
         this.animationName = animationName;
-      } else {
-        //Take a step through the current animation
-        this.animationStep++;
-        if (animationAction.steps.length === 0) {
-          this.animationStep = 0;
-        } else if (animationAction.loop) {
-          while (this.animationStep >= animationAction.steps.length) {
-            this.animationStep -= animationAction.steps.length;
-          }
-        } else {
-          this.animationStep = animationAction.steps.length - 1;
+      }
+    }
+  }, {
+    key: "nextAnimationFrame",
+    value: function nextAnimationFrame() {
+      if (!this.animationSet || !this.animationSet.actions[this.animationName]) return;
+
+      var animationAction = this.animationSet.actions[this.animationName];
+      this.animationStep++;
+      if (animationAction.steps.length === 0) {
+        this.animationStep = 0;
+      } else if (animationAction.loop) {
+        while (this.animationStep >= animationAction.steps.length) {
+          this.animationStep -= animationAction.steps.length;
         }
+      } else {
+        this.animationStep = animationAction.steps.length - 1;
       }
     }
   }, {
@@ -956,6 +990,37 @@ var AoE = function () {
     key: "hasInfiniteDuration",
     value: function hasInfiniteDuration() {
       return this.startDuration === DURATION_INFINITE;
+    }
+  }, {
+    key: "setAnimation",
+    value: function setAnimation() {
+      var animationName = arguments.length <= 0 || arguments[0] === undefined ? "" : arguments[0];
+      var restart = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
+
+      if (!this.animationSet || !this.animationSet.actions[animationName]) return;
+
+      if (restart || this.animationName !== animationName) {
+        //Set this as the new animation
+        this.animationStep = 0;
+        this.animationName = animationName;
+      }
+    }
+  }, {
+    key: "nextAnimationFrame",
+    value: function nextAnimationFrame() {
+      if (!this.animationSet || !this.animationSet.actions[this.animationName]) return;
+
+      var animationAction = this.animationSet.actions[this.animationName];
+      this.animationStep++;
+      if (animationAction.steps.length === 0) {
+        this.animationStep = 0;
+      } else if (animationAction.loop) {
+        while (this.animationStep >= animationAction.steps.length) {
+          this.animationStep -= animationAction.steps.length;
+        }
+      } else {
+        this.animationStep = animationAction.steps.length - 1;
+      }
     }
   }, {
     key: "left",
@@ -1247,7 +1312,10 @@ function initialise() {
   //Images
   //--------------------------------
   this.assets.images.actor = new ImageAsset("assets/actor.png");
-  this.assets.images.box = new ImageAsset("assets/box.png");
+  this.assets.images.sarcophagus = new ImageAsset("assets/sarcophagus.png");
+  this.assets.images.gate = new ImageAsset("assets/gate.png");
+  this.assets.images.plate = new ImageAsset("assets/plate.png");
+  this.assets.images.goal = new ImageAsset("assets/goal.png");
   //--------------------------------
 
   //Animations
@@ -1288,6 +1356,52 @@ function initialise() {
           steps: [{ col: 1, row: 0, duration: STEPS_PER_SECOND * 2 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 }, { col: 1, row: 1, duration: STEPS_PER_SECOND * 2 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 }]
         }
       }
+    },
+
+    sarcophagus: {
+      rule: ANIMATION_RULE_BASIC,
+      tileWidth: 64,
+      tileHeight: 128,
+      tileOffsetX: 0,
+      tileOffsetY: -32,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [{ col: 0, row: 0, duration: 1 }]
+        },
+        glow: {
+          loop: true,
+          steps: [{ col: 1, row: 0, duration: STEPS_PER_SECOND * 4 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 }, { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 }, { col: 1, row: 1, duration: STEPS_PER_SECOND * 4 }]
+        }
+      }
+    },
+
+    simple128: {
+      rule: ANIMATION_RULE_BASIC,
+      tileWidth: 128,
+      tileHeight: 128,
+      tileOffsetX: 0,
+      tileOffsetY: 0,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [{ col: 0, row: 0, duration: 1 }]
+        }
+      }
+    },
+
+    simple64: {
+      rule: ANIMATION_RULE_BASIC,
+      tileWidth: 64,
+      tileHeight: 64,
+      tileOffsetX: 0,
+      tileOffsetY: 0,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [{ col: 0, row: 0, duration: 1 }]
+        }
+      }
     }
 
   };
@@ -1298,29 +1412,29 @@ function initialise() {
     for (var animationName in animationSet.actions) {
       var animationAction = animationSet.actions[animationName];
       var newSteps = [];
-      var _iteratorNormalCompletion10 = true;
-      var _didIteratorError10 = false;
-      var _iteratorError10 = undefined;
+      var _iteratorNormalCompletion11 = true;
+      var _didIteratorError11 = false;
+      var _iteratorError11 = undefined;
 
       try {
-        for (var _iterator10 = animationAction.steps[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-          var step = _step10.value;
+        for (var _iterator11 = animationAction.steps[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+          var step = _step11.value;
 
           for (var i = 0; i < step.duration; i++) {
             newSteps.push(step);
           }
         }
       } catch (err) {
-        _didIteratorError10 = true;
-        _iteratorError10 = err;
+        _didIteratorError11 = true;
+        _iteratorError11 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion10 && _iterator10.return) {
-            _iterator10.return();
+          if (!_iteratorNormalCompletion11 && _iterator11.return) {
+            _iterator11.return();
           }
         } finally {
-          if (_didIteratorError10) {
-            throw _iteratorError10;
+          if (_didIteratorError11) {
+            throw _iteratorError11;
           }
         }
       }
@@ -1431,39 +1545,39 @@ function runAction() {
   //Animations
   //--------------------------------
   if (playerIsIdle) {
-    this.refs["player"].playAnimation("idle");
+    this.refs["player"].setAnimation("idle");
   } else {
-    this.refs["player"].playAnimation("walk");
+    this.refs["player"].setAnimation("walk");
   }
 
   if (this.refs["boxes"]) {
-    var _iteratorNormalCompletion11 = true;
-    var _didIteratorError11 = false;
-    var _iteratorError11 = undefined;
+    var _iteratorNormalCompletion12 = true;
+    var _didIteratorError12 = false;
+    var _iteratorError12 = undefined;
 
     try {
-      for (var _iterator11 = this.refs["boxes"][Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-        var box = _step11.value;
+      for (var _iterator12 = this.refs["boxes"][Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+        var box = _step12.value;
 
         if (box.effects.find(function (eff) {
           return eff.name === "charge";
         })) {
-          box.playAnimation("glow");
+          box.setAnimation("glow");
         } else {
-          box.playAnimation("idle");
+          box.setAnimation("idle");
         }
       }
     } catch (err) {
-      _didIteratorError11 = true;
-      _iteratorError11 = err;
+      _didIteratorError12 = true;
+      _iteratorError12 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion11 && _iterator11.return) {
-          _iterator11.return();
+        if (!_iteratorNormalCompletion12 && _iterator12.return) {
+          _iterator12.return();
         }
       } finally {
-        if (_didIteratorError11) {
-          throw _iteratorError11;
+        if (_didIteratorError12) {
+          throw _iteratorError12;
         }
       }
     }
@@ -1508,9 +1622,15 @@ function startLevelInit() {
 
   this.refs["gate"] = new Actor("gate", midX, 16, 128, SHAPE_SQUARE);
   this.refs["gate"].canBeMoved = false;
+  this.refs["gate"].spritesheet = this.assets.images.gate;
+  this.refs["gate"].animationSet = this.animationSets.simple128;
+  this.refs["gate"].setAnimation("idle");
   this.actors.push(this.refs["gate"]);
 
   this.refs["goal"] = new AoE("goal", this.width / 2, 32, 64, SHAPE_SQUARE, DURATION_INFINITE, []);
+  this.refs["goal"].spritesheet = this.assets.images.goal;
+  this.refs["goal"].animationSet = this.animationSets.simple64;
+  this.refs["goal"].setAnimation("idle");
   this.areasOfEffect.push(this.refs["goal"]);
 }
 
@@ -1532,44 +1652,18 @@ function startLevel1() {
   var chargeEffect = new Effect("charge", {}, 4, STACKING_RULE_ADD, null);
 
   this.refs.boxes = [new Actor("", midX - 128, midY - 64, 64, SHAPE_SQUARE), new Actor("", midX + 128, midY - 64, 64, SHAPE_SQUARE)];
-  var _iteratorNormalCompletion12 = true;
-  var _didIteratorError12 = false;
-  var _iteratorError12 = undefined;
-
-  try {
-    for (var _iterator12 = this.refs.boxes[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-      var box = _step12.value;
-
-      box.attributes.box = true;
-      box.spritesheet = this.assets.images.box;
-      box.animationSet = this.animationSets.box;
-      this.actors.push(box);
-    }
-  } catch (err) {
-    _didIteratorError12 = true;
-    _iteratorError12 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion12 && _iterator12.return) {
-        _iterator12.return();
-      }
-    } finally {
-      if (_didIteratorError12) {
-        throw _iteratorError12;
-      }
-    }
-  }
-
-  this.refs.plates = [new AoE("", midX - 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]), new AoE("", midX + 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()])];
   var _iteratorNormalCompletion13 = true;
   var _didIteratorError13 = false;
   var _iteratorError13 = undefined;
 
   try {
-    for (var _iterator13 = this.refs.plates[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-      var plate = _step13.value;
+    for (var _iterator13 = this.refs.boxes[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+      var box = _step13.value;
 
-      this.areasOfEffect.push(plate);
+      box.attributes.box = true;
+      box.spritesheet = this.assets.images.sarcophagus;
+      box.animationSet = this.animationSets.sarcophagus;
+      this.actors.push(box);
     }
   } catch (err) {
     _didIteratorError13 = true;
@@ -1582,6 +1676,35 @@ function startLevel1() {
     } finally {
       if (_didIteratorError13) {
         throw _iteratorError13;
+      }
+    }
+  }
+
+  this.refs.plates = [new AoE("", midX - 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]), new AoE("", midX + 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()])];
+  var _iteratorNormalCompletion14 = true;
+  var _didIteratorError14 = false;
+  var _iteratorError14 = undefined;
+
+  try {
+    for (var _iterator14 = this.refs.plates[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+      var plate = _step14.value;
+
+      plate.spritesheet = this.assets.images.goal;
+      plate.animationSet = this.animationSets.simple64;
+      plate.setAnimation("idle");
+      this.areasOfEffect.push(plate);
+    }
+  } catch (err) {
+    _didIteratorError14 = true;
+    _iteratorError14 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion14 && _iterator14.return) {
+        _iterator14.return();
+      }
+    } finally {
+      if (_didIteratorError14) {
+        throw _iteratorError14;
       }
     }
   }
@@ -1599,38 +1722,38 @@ function checkIfAllBoxesAreCharged() {
   var allBoxesAreCharged = true;
 
   if (this.refs["plates"] && this.refs["boxes"]) {
-    var _iteratorNormalCompletion14 = true;
-    var _didIteratorError14 = false;
-    var _iteratorError14 = undefined;
+    var _iteratorNormalCompletion15 = true;
+    var _didIteratorError15 = false;
+    var _iteratorError15 = undefined;
 
     try {
-      for (var _iterator14 = this.refs["plates"][Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-        var plate = _step14.value;
+      for (var _iterator15 = this.refs["plates"][Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+        var plate = _step15.value;
 
         var thisPlateIsCharged = false;
-        var _iteratorNormalCompletion15 = true;
-        var _didIteratorError15 = false;
-        var _iteratorError15 = undefined;
+        var _iteratorNormalCompletion16 = true;
+        var _didIteratorError16 = false;
+        var _iteratorError16 = undefined;
 
         try {
-          for (var _iterator15 = this.refs["boxes"][Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
-            var box = _step15.value;
+          for (var _iterator16 = this.refs["boxes"][Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+            var box = _step16.value;
 
             if (this.isATouchingB(box, plate)) {
               thisPlateIsCharged = true;
             }
           }
         } catch (err) {
-          _didIteratorError15 = true;
-          _iteratorError15 = err;
+          _didIteratorError16 = true;
+          _iteratorError16 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion15 && _iterator15.return) {
-              _iterator15.return();
+            if (!_iteratorNormalCompletion16 && _iterator16.return) {
+              _iterator16.return();
             }
           } finally {
-            if (_didIteratorError15) {
-              throw _iteratorError15;
+            if (_didIteratorError16) {
+              throw _iteratorError16;
             }
           }
         }
@@ -1638,16 +1761,16 @@ function checkIfAllBoxesAreCharged() {
         allBoxesAreCharged = allBoxesAreCharged && thisPlateIsCharged;
       }
     } catch (err) {
-      _didIteratorError14 = true;
-      _iteratorError14 = err;
+      _didIteratorError15 = true;
+      _iteratorError15 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion14 && _iterator14.return) {
-          _iterator14.return();
+        if (!_iteratorNormalCompletion15 && _iterator15.return) {
+          _iterator15.return();
         }
       } finally {
-        if (_didIteratorError14) {
-          throw _iteratorError14;
+        if (_didIteratorError15) {
+          throw _iteratorError15;
         }
       }
     }
@@ -1657,6 +1780,11 @@ function checkIfAllBoxesAreCharged() {
     if (this.refs["gate"] && this.refs["gate"].y >= -32) {
       this.refs["gate"].x = this.width / 2 - 1 + Math.random() * 2;
       this.refs["gate"].y -= 1;
+    }
+  } else {
+    if (this.refs["gate"] && this.refs["gate"].y <= 16) {
+      this.refs["gate"].x = this.width / 2 - 1 + Math.random() * 2;
+      this.refs["gate"].y += 1;
     }
   }
 }
