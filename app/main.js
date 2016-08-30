@@ -21,7 +21,7 @@ var App = function () {
 
     //Initialise properties
     //--------------------------------
-    this.debugMode = true;
+    this.debugMode = false;
     this.runCycle = undefined;
     this.html = document.getElementById("app");
     this.canvas = document.getElementById("canvas");
@@ -51,6 +51,10 @@ var App = function () {
     this.areasOfEffect = [];
     this.refs = {};
     this.store = {};
+    this.ui = {
+      foregroundImage: null,
+      backgroundImage: null
+    };
     //--------------------------------
 
     //Prepare Input
@@ -290,7 +294,6 @@ var App = function () {
       this.actors.sort(function (a, b) {
         return a.bottom - b.bottom;
       });
-
       //this.paint();  //moved to run()
       //--------------------------------
 
@@ -481,6 +484,11 @@ var App = function () {
       //Clear
       this.context2d.clearRect(0, 0, this.width, this.height);
 
+      if (this.ui.backgroundImage && this.ui.backgroundImage.loaded) {
+        var image = this.ui.backgroundImage;
+        this.context2d.drawImage(image.img, (this.width - image.img.width) / 2, (this.height - image.img.height) / 2);
+      }
+
       switch (this.state) {
         case STATE_START:
           this.paint_start();
@@ -491,6 +499,11 @@ var App = function () {
         case STATE_ACTION:
           this.paint_action();
           break;
+      }
+
+      if (this.ui.foregroundImage && this.ui.foregroundImage.loaded) {
+        var _image = this.ui.foregroundImage;
+        this.context2d.drawImage(_image.img, (this.width - _image.img.width) / 2, (this.height - _image.img.height) / 2);
       }
     }
   }, {
@@ -1316,6 +1329,7 @@ function initialise() {
   this.assets.images.gate = new ImageAsset("assets/gate.png");
   this.assets.images.plate = new ImageAsset("assets/plate.png");
   this.assets.images.goal = new ImageAsset("assets/goal.png");
+  this.assets.images.background = new ImageAsset("assets/background.png");
   //--------------------------------
 
   //Animations
@@ -1336,24 +1350,6 @@ function initialise() {
         walk: {
           loop: true,
           steps: [{ row: 1, duration: STEPS_PER_SECOND }, { row: 2, duration: STEPS_PER_SECOND }, { row: 3, duration: STEPS_PER_SECOND }, { row: 2, duration: STEPS_PER_SECOND }]
-        }
-      }
-    },
-
-    box: {
-      rule: ANIMATION_RULE_BASIC,
-      tileWidth: 64,
-      tileHeight: 64,
-      tileOffsetX: 0,
-      tileOffsetY: 0,
-      actions: {
-        idle: {
-          loop: true,
-          steps: [{ col: 0, row: 0, duration: 1 }]
-        },
-        glow: {
-          loop: true,
-          steps: [{ col: 1, row: 0, duration: STEPS_PER_SECOND * 2 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 }, { col: 1, row: 1, duration: STEPS_PER_SECOND * 2 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 }]
         }
       }
     },
@@ -1400,6 +1396,10 @@ function initialise() {
         idle: {
           loop: true,
           steps: [{ col: 0, row: 0, duration: 1 }]
+        },
+        glow: {
+          loop: true,
+          steps: [{ col: 0, row: 0, duration: STEPS_PER_SECOND * 3 }, { col: 1, row: 0, duration: STEPS_PER_SECOND * 3 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 3 }, { col: 1, row: 1, duration: STEPS_PER_SECOND * 3 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 3 }, { col: 1, row: 0, duration: STEPS_PER_SECOND * 3 }, { col: 0, row: 0, duration: STEPS_PER_SECOND * 3 }]
         }
       }
     }
@@ -1457,6 +1457,7 @@ function runStart() {
   this.store.level = 1;
 
   if (this.pointer.state === INPUT_ACTIVE || this.keys[KEY_CODES.UP].state === INPUT_ACTIVE || this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE || this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE || this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE || this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE || this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
+    this.ui.backgroundImage = this.assets.images.background;
     this.changeState(STATE_ACTION, startLevel1);
   }
 }
@@ -1630,7 +1631,7 @@ function startLevelInit() {
   this.refs["goal"] = new AoE("goal", this.width / 2, 32, 64, SHAPE_SQUARE, DURATION_INFINITE, []);
   this.refs["goal"].spritesheet = this.assets.images.goal;
   this.refs["goal"].animationSet = this.animationSets.simple64;
-  this.refs["goal"].setAnimation("idle");
+  this.refs["goal"].setAnimation("glow");
   this.areasOfEffect.push(this.refs["goal"]);
 }
 
@@ -1689,7 +1690,7 @@ function startLevel1() {
     for (var _iterator14 = this.refs.plates[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
       var plate = _step14.value;
 
-      plate.spritesheet = this.assets.images.goal;
+      plate.spritesheet = this.assets.images.plate;
       plate.animationSet = this.animationSets.simple64;
       plate.setAnimation("idle");
       this.areasOfEffect.push(plate);

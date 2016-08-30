@@ -13,7 +13,7 @@ class App {
   constructor(startScript) {
     //Initialise properties
     //--------------------------------
-    this.debugMode = true;
+    this.debugMode = false;
     this.runCycle = undefined;
     this.html = document.getElementById("app");
     this.canvas = document.getElementById("canvas");
@@ -38,11 +38,15 @@ class App {
       runStart: null,
       runAction: null,
       runEnd: null,
-    }
+    };
     this.actors = [];
     this.areasOfEffect = [];
     this.refs = {};
     this.store = {};
+    this.ui = {
+      foregroundImage: null,
+      backgroundImage: null,
+    };
     //--------------------------------
     
     //Prepare Input
@@ -170,8 +174,7 @@ class App {
     //Arrange sprites by vertical order.
     this.actors.sort((a, b) => {
       return a.bottom - b.bottom;
-    });    
-    
+    });
     //this.paint();  //moved to run()
     //--------------------------------
     
@@ -349,6 +352,11 @@ class App {
     //Clear
     this.context2d.clearRect(0, 0, this.width, this.height);
     
+    if (this.ui.backgroundImage && this.ui.backgroundImage.loaded) {
+      const image = this.ui.backgroundImage;
+      this.context2d.drawImage(image.img, (this.width - image.img.width) / 2, (this.height - image.img.height) / 2);
+    }
+    
     switch (this.state) {
       case STATE_START:
         this.paint_start();
@@ -359,6 +367,11 @@ class App {
       case STATE_ACTION:
         this.paint_action();
         break;
+    }
+    
+    if (this.ui.foregroundImage && this.ui.foregroundImage.loaded) {
+      const image = this.ui.foregroundImage;
+      this.context2d.drawImage(image.img, (this.width - image.img.width) / 2, (this.height - image.img.height) / 2);
     }
   }
   
@@ -787,7 +800,7 @@ const Utility = {
     
     return 0;
   }
-}
+};
 
 const KEY_CODES = {
   LEFT: 37,
@@ -837,7 +850,7 @@ const KEY_CODES = {
   NUM7: 55,
   NUM8: 56,
   NUM9: 57,
-}
+};
 
 const KEY_VALUES = {
   "ArrowLeft": KEY_CODES.LEFT,
@@ -931,7 +944,7 @@ const KEY_VALUES = {
   "Digit8": KEY_CODES.NUM8,
   "9": KEY_CODES.NUM9,
   "Digit9": KEY_CODES.NUM9,
-}
+};
 
 function ImageAsset(url) {
   this.url = url;
@@ -973,6 +986,7 @@ function initialise() {
   this.assets.images.gate = new ImageAsset("assets/gate.png");
   this.assets.images.plate = new ImageAsset("assets/plate.png");
   this.assets.images.goal = new ImageAsset("assets/goal.png");
+  this.assets.images.background = new ImageAsset("assets/background.png");
   //--------------------------------
   
   //Animations
@@ -999,31 +1013,6 @@ function initialise() {
             { row: 2, duration: STEPS_PER_SECOND },
             { row: 3, duration: STEPS_PER_SECOND },
             { row: 2, duration: STEPS_PER_SECOND },
-          ],
-        },
-      },
-    },
-    
-    box: {
-      rule: ANIMATION_RULE_BASIC,
-      tileWidth: 64,
-      tileHeight: 64,
-      tileOffsetX: 0,
-      tileOffsetY: 0,
-      actions: {
-        idle: {
-          loop: true,
-          steps: [
-            { col: 0, row: 0, duration: 1 }
-          ],
-        },
-        glow: {
-          loop: true,
-          steps: [
-            { col: 1, row: 0, duration: STEPS_PER_SECOND * 2 },
-            { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 },
-            { col: 1, row: 1, duration: STEPS_PER_SECOND * 2 },
-            { col: 0, row: 1, duration: STEPS_PER_SECOND * 2 },
           ],
         },
       },
@@ -1083,11 +1072,22 @@ function initialise() {
             { col: 0, row: 0, duration: 1 }
           ],
         },
+        glow: {
+          loop: true,
+          steps: [
+            { col: 0, row: 0, duration: STEPS_PER_SECOND * 3 },
+            { col: 1, row: 0, duration: STEPS_PER_SECOND * 3 },
+            { col: 0, row: 1, duration: STEPS_PER_SECOND * 3 },
+            { col: 1, row: 1, duration: STEPS_PER_SECOND * 3 },
+            { col: 0, row: 1, duration: STEPS_PER_SECOND * 3 },
+            { col: 1, row: 0, duration: STEPS_PER_SECOND * 3 },
+            { col: 0, row: 0, duration: STEPS_PER_SECOND * 3 },
+          ],
+        },
       },
     },
     
   };
-  
   
   //Process Animations; expand steps to many frames per steps.
   for (let animationTitle in this.animationSets) {
@@ -1122,6 +1122,7 @@ function runStart() {
       this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE ||
       this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE ||
       this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
+    this.ui.backgroundImage = this.assets.images.background;
     this.changeState(STATE_ACTION, startLevel1);
   }
 }
@@ -1280,7 +1281,7 @@ function startLevelInit() {
   this.refs["goal"] = new AoE("goal", this.width / 2, 32, 64, SHAPE_SQUARE, DURATION_INFINITE, []);
   this.refs["goal"].spritesheet = this.assets.images.goal;
   this.refs["goal"].animationSet = this.animationSets.simple64;
-  this.refs["goal"].setAnimation("idle");
+  this.refs["goal"].setAnimation("glow");
   this.areasOfEffect.push(this.refs["goal"]);
 }
 
@@ -1315,7 +1316,7 @@ function startLevel1() {
     new AoE("", midX + 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]),
   ];
   for (let plate of this.refs.plates) {
-    plate.spritesheet = this.assets.images.goal;
+    plate.spritesheet = this.assets.images.plate;
     plate.animationSet = this.animationSets.simple64;
     plate.setAnimation("idle");
     this.areasOfEffect.push(plate);
