@@ -32,7 +32,8 @@ class App {
     this.assets = {
       images: {}
     };
-    this.assetsLoaded = true;
+    this.assetsLoaded = 0;
+    this.assetsTotal = 0;
     this.scripts = {
       run: null,
       runStart: null,
@@ -126,6 +127,16 @@ class App {
   }
   
   run_start() {
+    this.assetsLoaded = 0;
+    this.assetsTotal = 0;    
+    for (let category in this.assets) {
+      for (let asset in this.assets[category]) {
+        this.assetsTotal++;
+        if (this.assets[category][asset].loaded) this.assetsLoaded++;
+      }
+    }
+    if (this.assetsLoaded < this.assetsTotal) return;
+    
     if (this.scripts.runStart) this.scripts.runStart.apply(this);
   }
   
@@ -376,19 +387,31 @@ class App {
   }
   
   paint_start() {
-    if (this.assetsLoaded) {
+    const percentage = (this.assetsTotal > 0) ? this.assetsLoaded / this.assetsTotal : 1;
+    
+    this.context2d.font = DEFAULT_FONT;
+    this.context2d.textAlign = "center";
+    this.context2d.textBaseline = "middle";
+
+    if (this.assetsLoaded < this.assetsTotal) {
+      const rgb = Math.floor(percentage * 255);
       this.context2d.beginPath();
       this.context2d.rect(0, 0, this.width, this.height);
-      this.context2d.fillStyle = "#c33";
+      this.context2d.fillStyle = "rgba("+rgb+","+rgb+","+rgb+",1)";
       this.context2d.fill();
+      this.context2d.fillStyle = "#fff";
+      this.context2d.fillText("Loading... (" + this.assetsLoaded+"/" + this.assetsTotal + ")", this.width / 2, this.height / 2); 
       this.context2d.closePath();
     } else {
       this.context2d.beginPath();
       this.context2d.rect(0, 0, this.width, this.height);
-      this.context2d.fillStyle = "#333";
+      this.context2d.fillStyle = "#fff";
       this.context2d.fill();
+      this.context2d.fillStyle = "#000";
+      this.context2d.fillText("Ready!", this.width / 2, this.height / 2); 
       this.context2d.closePath();
     }
+    
   }
   paint_end() {
     this.context2d.beginPath();
@@ -414,10 +437,6 @@ class App {
           case SHAPE_CIRCLE:
             this.context2d.beginPath();
             this.context2d.arc(aoe.x, aoe.y, aoe.size / 2, 0, 2 * Math.PI);
-            this.context2d.stroke();
-            this.context2d.closePath();
-            this.context2d.beginPath();
-            this.context2d.moveTo(aoe.x, aoe.y);
             this.context2d.stroke();
             this.context2d.closePath();
             break;
@@ -575,6 +594,7 @@ const INPUT_ACTIVE = 1;
 const INPUT_ENDED = 2;
 const INPUT_DISTANCE_SENSITIVITY = 16;
 const MAX_KEYS = 128;
+const DEFAULT_FONT = "32px monospace";
 
 const STATE_START = 0;
 const STATE_ACTION = 1;
@@ -1132,14 +1152,6 @@ function initialise() {
 }
 
 function runStart() {
-  this.assetsLoaded = true;
-  for (let category in this.assets) {
-    for (let asset in this.assets[category]) {
-      this.assetsLoaded = this.assetsLoaded && this.assets[category][asset].loaded;
-    }
-  }
-  if (!this.assetsLoaded) return;
-  
   this.store.level = 1;
   
   if (this.pointer.state === INPUT_ACTIVE || 
