@@ -974,7 +974,7 @@ var DIRECTION_NORTH = 3;
 
 var AoE = function () {
   function AoE() {
-    var id = arguments.length <= 0 || arguments[0] === undefined ? "" : arguments[0];
+    var name = arguments.length <= 0 || arguments[0] === undefined ? "" : arguments[0];
     var x = arguments.length <= 1 || arguments[1] === undefined ? 0 : arguments[1];
     var y = arguments.length <= 2 || arguments[2] === undefined ? 0 : arguments[2];
     var size = arguments.length <= 3 || arguments[3] === undefined ? 32 : arguments[3];
@@ -984,7 +984,7 @@ var AoE = function () {
 
     _classCallCheck(this, AoE);
 
-    this.id = id;
+    this.name = name;
     this.x = x;
     this.y = y;
     this.size = size;
@@ -1367,7 +1367,25 @@ function initialise() {
         },
         glow: {
           loop: true,
-          steps: [{ col: 1, row: 0, duration: STEPS_PER_SECOND * 4 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 }, { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 }, { col: 1, row: 1, duration: STEPS_PER_SECOND * 4 }]
+          steps: [{ col: 1, row: 0, duration: STEPS_PER_SECOND * 4 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 }, { col: 1, row: 1, duration: STEPS_PER_SECOND * 4 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 }, { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 }]
+        }
+      }
+    },
+
+    plate: {
+      rule: ANIMATION_RULE_BASIC,
+      tileWidth: 64,
+      tileHeight: 64,
+      tileOffsetX: 0,
+      tileOffsetY: 0,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [{ col: 0, row: 0, duration: 1 }]
+        },
+        glow: {
+          loop: true,
+          steps: [{ col: 1, row: 0, duration: STEPS_PER_SECOND * 4 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 }, { col: 1, row: 1, duration: STEPS_PER_SECOND * 4 }, { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 }, { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 }]
         }
       }
     },
@@ -1681,7 +1699,7 @@ function startLevel1() {
     }
   }
 
-  this.refs.plates = [new AoE("", midX - 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]), new AoE("", midX + 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()])];
+  this.refs.plates = [new AoE("plate", midX - 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]), new AoE("plate", midX + 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()])];
   var _iteratorNormalCompletion14 = true;
   var _didIteratorError14 = false;
   var _iteratorError14 = undefined;
@@ -1691,7 +1709,7 @@ function startLevel1() {
       var plate = _step14.value;
 
       plate.spritesheet = this.assets.images.plate;
-      plate.animationSet = this.animationSets.simple64;
+      plate.animationSet = this.animationSets.plate;
       plate.setAnimation("idle");
       this.areasOfEffect.push(plate);
     }
@@ -1742,6 +1760,7 @@ function checkIfAllBoxesAreCharged() {
 
             if (this.isATouchingB(box, plate)) {
               thisPlateIsCharged = true;
+              plate.setAnimation("glow");
             }
           }
         } catch (err) {
@@ -1759,6 +1778,7 @@ function checkIfAllBoxesAreCharged() {
           }
         }
 
+        !thisPlateIsCharged && plate.setAnimation("idle");
         allBoxesAreCharged = allBoxesAreCharged && thisPlateIsCharged;
       }
     } catch (err) {

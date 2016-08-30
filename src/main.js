@@ -686,8 +686,8 @@ const DIRECTION_NORTH = 3;
  */
 //==============================================================================
 class AoE {
-  constructor(id = "", x = 0, y = 0, size = 32, shape = SHAPE_CIRCLE, duration = 1, effects = []) {
-    this.id = id; 
+  constructor(name = "", x = 0, y = 0, size = 32, shape = SHAPE_CIRCLE, duration = 1, effects = []) {
+    this.name = name; 
     this.x = x;
     this.y = y;
     this.size = size;
@@ -1036,8 +1036,35 @@ function initialise() {
           steps: [
             { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 },
             { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 },
-            { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 },
             { col: 1, row: 1, duration: STEPS_PER_SECOND * 4 },
+            { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 },
+            { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 },
+          ],
+        },
+      },
+    },
+    
+    plate: {
+      rule: ANIMATION_RULE_BASIC,
+      tileWidth: 64,
+      tileHeight: 64,
+      tileOffsetX: 0,
+      tileOffsetY: 0,
+      actions: {
+        idle: {
+          loop: true,
+          steps: [
+            { col: 0, row: 0, duration: 1 }
+          ],
+        },
+        glow: {
+          loop: true,
+          steps: [
+            { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 },
+            { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 },
+            { col: 1, row: 1, duration: STEPS_PER_SECOND * 4 },
+            { col: 0, row: 1, duration: STEPS_PER_SECOND * 4 },
+            { col: 1, row: 0, duration: STEPS_PER_SECOND * 4 },
           ],
         },
       },
@@ -1312,12 +1339,12 @@ function startLevel1() {
   }
   
   this.refs.plates = [
-    new AoE("", midX - 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]),
-    new AoE("", midX + 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]),
+    new AoE("plate", midX - 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]),
+    new AoE("plate", midX + 128, midY + 64, 64, SHAPE_SQUARE, DURATION_INFINITE, [chargeEffect.copy()]),
   ];
   for (let plate of this.refs.plates) {
     plate.spritesheet = this.assets.images.plate;
-    plate.animationSet = this.animationSets.simple64;
+    plate.animationSet = this.animationSets.plate;
     plate.setAnimation("idle");
     this.areasOfEffect.push(plate);
   }
@@ -1340,8 +1367,10 @@ function checkIfAllBoxesAreCharged() {
       for (let box of this.refs["boxes"]) {
         if (this.isATouchingB(box, plate)) {
           thisPlateIsCharged = true;
+          plate.setAnimation("glow");
         }
       }
+      !thisPlateIsCharged && plate.setAnimation("idle");
       allBoxesAreCharged = allBoxesAreCharged && thisPlateIsCharged;
     }
   }
