@@ -32,11 +32,13 @@ class App {
     this.assets = {
       images: {}
     };
-    this.assetsLoaded = true;
+    this.assetsLoaded = 0;
+    this.assetsTotal = 0;
     this.scripts = {
       run: null,
       runStart: null,
       runAction: null,
+      runComic: null,
       runEnd: null,
     };
     this.actors = [];
@@ -47,6 +49,7 @@ class App {
       foregroundImage: null,
       backgroundImage: null,
     };
+    this.comicStrip = null;
     //--------------------------------
     
     //Prepare Input
@@ -120,12 +123,25 @@ class App {
       case STATE_ACTION:
         this.run_action();
         break;
+      case STATE_COMIC:
+        this.run_comic();
+        break;
     }
     
     this.paint();
   }
   
   run_start() {
+    this.assetsLoaded = 0;
+    this.assetsTotal = 0;    
+    for (let category in this.assets) {
+      for (let asset in this.assets[category]) {
+        this.assetsTotal++;
+        if (this.assets[category][asset].loaded) this.assetsLoaded++;
+      }
+    }
+    if (this.assetsLoaded < this.assetsTotal) return;
+    
     if (this.scripts.runStart) this.scripts.runStart.apply(this);
   }
   
@@ -156,10 +172,13 @@ class App {
     //--------------------------------
     for (let actor of this.actors) {
       for (let effect of actor.effects) {
+        //TODO make this an external script
+        //----------------
         if (effect.name === "push" && actor.canBeMoved) {
           actor.x += effect.data.x || 0;
           actor.y += effect.data.y || 0;
         }
+        //----------------
       }
     }
     //--------------------------------
@@ -220,6 +239,46 @@ class App {
       }
     }
     //--------------------------------
+  }
+  
+  run_comic() {
+    if (this.scripts.runComic) this.scripts.runComic.apply(this);
+    
+    if (!this.comicStrip) return;
+    const comic = this.comicStrip;
+    
+    if (comic.state !== COMIC_STRIP_STATE_TRANSITIONING &&
+        comic.currentPanel >= comic.panels.length) {
+      comic.onFinish.apply(this);
+    }
+    
+    switch (comic.state) {
+      case COMIC_STRIP_STATE_TRANSITIONING:
+        if (comic.counter < comic.transitionTime) {
+          comic.counter++;          
+        } else {
+          comic.counter = 0;
+          comic.state = COMIC_STRIP_STATE_WAIT_BEFORE_INPUT
+        }
+        break;
+      case COMIC_STRIP_STATE_WAIT_BEFORE_INPUT:
+        if (comic.counter < comic.waitTime) {
+          comic.counter++;
+        } else {
+          comic.counter = 0;
+          comic.state = COMIC_STRIP_STATE_IDLE;
+        }
+        break;
+      case COMIC_STRIP_STATE_IDLE:
+        if (this.pointer.state === INPUT_ACTIVE || 
+            this.keys[KEY_CODES.UP].state === INPUT_ACTIVE ||
+            this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE ||
+            this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
+          comic.currentPanel++;
+          comic.state = COMIC_STRIP_STATE_TRANSITIONING;
+        }        
+        break;
+    }
   }
   
   //----------------------------------------------------------------
@@ -367,6 +426,9 @@ class App {
       case STATE_ACTION:
         this.paint_action();
         break;
+      case STATE_COMIC:
+        this.paint_comic();
+        break;
     }
     
     if (this.ui.foregroundImage && this.ui.foregroundImage.loaded) {
@@ -376,19 +438,31 @@ class App {
   }
   
   paint_start() {
-    if (this.assetsLoaded) {
+    const percentage = (this.assetsTotal > 0) ? this.assetsLoaded / this.assetsTotal : 1;
+    
+    this.context2d.font = DEFAULT_FONT;
+    this.context2d.textAlign = "center";
+    this.context2d.textBaseline = "middle";
+
+    if (this.assetsLoaded < this.assetsTotal) {
+      const rgb = Math.floor(percentage * 255);
       this.context2d.beginPath();
       this.context2d.rect(0, 0, this.width, this.height);
-      this.context2d.fillStyle = "#c33";
+      this.context2d.fillStyle = "rgba("+rgb+","+rgb+","+rgb+",1)";
       this.context2d.fill();
+      this.context2d.fillStyle = "#fff";
+      this.context2d.fillText("Loading... (" + this.assetsLoaded+"/" + this.assetsTotal + ")", this.width / 2, this.height / 2); 
       this.context2d.closePath();
     } else {
       this.context2d.beginPath();
       this.context2d.rect(0, 0, this.width, this.height);
-      this.context2d.fillStyle = "#333";
+      this.context2d.fillStyle = "#fff";
       this.context2d.fill();
+      this.context2d.fillStyle = "#000";
+      this.context2d.fillText("Ready!", this.width / 2, this.height / 2); 
       this.context2d.closePath();
     }
+    
   }
   paint_end() {
     this.context2d.beginPath();
@@ -414,10 +488,6 @@ class App {
           case SHAPE_CIRCLE:
             this.context2d.beginPath();
             this.context2d.arc(aoe.x, aoe.y, aoe.size / 2, 0, 2 * Math.PI);
-            this.context2d.stroke();
-            this.context2d.closePath();
-            this.context2d.beginPath();
-            this.context2d.moveTo(aoe.x, aoe.y);
             this.context2d.stroke();
             this.context2d.closePath();
             break;
@@ -474,6 +544,34 @@ class App {
     //--------------------------------
   }
   
+  paint_comic() {
+    if (!this.comicStrip) return;
+    const comic = this.comicStrip;
+    
+    this.context2d.beginPath();
+    this.context2d.rect(0, 0, this.width, this.height);
+    this.context2d.fillStyle = comic.background;
+    this.context2d.fill();
+    this.context2d.closePath();
+    
+    switch (comic.state) {
+      case COMIC_STRIP_STATE_TRANSITIONING:
+        const offsetY = (comic.transitionTime > 0)
+          ? Math.floor(comic.counter / comic.transitionTime * -this.height)
+          : 0;
+        this.paintComicPanel(comic.getPreviousPanel(), offsetY);
+        this.paintComicPanel(comic.getCurrentPanel(), offsetY + this.height);
+        break;
+      case COMIC_STRIP_STATE_WAIT_BEFORE_INPUT:
+        this.paintComicPanel(comic.getCurrentPanel());
+        break;
+      case COMIC_STRIP_STATE_IDLE:
+        this.paintComicPanel(comic.getCurrentPanel());
+        //TODO: Paint "NEXT" icon
+        break;
+    }
+  }
+  
   paintSprite(obj) {
     if (!obj.spritesheet || !obj.spritesheet.loaded ||
         !obj.animationSet || !obj.animationSet.actions[obj.animationName])
@@ -499,6 +597,26 @@ class App {
     const tgtH = srcH;
     
     this.context2d.drawImage(obj.spritesheet.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
+  }
+  
+  paintComicPanel(panel = null, offsetY = 0) {
+    if (!panel || !panel.loaded) return;
+    
+    const ratioX = this.width / panel.img.width;
+    const ratioY = this.height / panel.img.height;
+    const ratio = Math.min(1, Math.min(ratioX, ratioY));
+    
+    const srcX = 0;
+    const srcY = 0;
+    const srcW = panel.img.width;
+    const srcH = panel.img.height;
+    
+    const tgtW = panel.img.width * ratio;
+    const tgtH = panel.img.height * ratio;
+    const tgtX = (this.width - tgtW) / 2;  //TODO
+    const tgtY = (this.height - tgtH) / 2 + offsetY;  //TODO
+    
+    this.context2d.drawImage(panel.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
   }
   
   //----------------------------------------------------------------
@@ -575,10 +693,12 @@ const INPUT_ACTIVE = 1;
 const INPUT_ENDED = 2;
 const INPUT_DISTANCE_SENSITIVITY = 16;
 const MAX_KEYS = 128;
+const DEFAULT_FONT = "32px monospace";
 
 const STATE_START = 0;
 const STATE_ACTION = 1;
-const STATE_END = 2;
+const STATE_COMIC = 2;
+const STATE_END = 3;
 
 const ANIMATION_RULE_BASIC = "basic";
 const ANIMATION_RULE_DIRECTIONAL = "directional";  
@@ -737,6 +857,92 @@ class AoE {
 }
 
 const DURATION_INFINITE = 0;
+//==============================================================================
+
+/*  4-Koma Comic Strip Class
+ */
+//==============================================================================
+class ComicStrip {
+  constructor(name = "", panels = [], onFinish = null) {
+    this.name = name;
+    this.panels = panels;
+    this.onFinish = onFinish;
+    
+    this.waitTime = DEFAULT_COMIC_STRIP_WAIT_TIME_BEFORE_INPUT;
+    this.transitionTime = DEFAULT_COMIC_STRIP_TRANSITION_TIME;    
+    this.background = "#333";
+    
+    this.start();
+  }
+  
+  start() {
+    this.currentPanel = 0;
+    this.state = COMIC_STRIP_STATE_TRANSITIONING;
+    this.counter = 0;
+  }
+  
+  getCurrentPanel() {
+    if (this.currentPanel < 0 || this.currentPanel >= this.panels.length) {
+      return null;
+    } else {
+      return this.panels[this.currentPanel];
+    }
+  }
+  
+  getPreviousPanel() {
+    if (this.currentPanel < 1 || this.currentPanel >= this.panels.length + 1) {
+      return null;
+    } else {
+      return this.panels[this.currentPanel - 1];
+    }
+  }
+  
+  /* Logic loop should be as follows
+  
+  loop {
+    if !TRANSITIONING && currentPanel >= panels.length
+      onFinish()
+      FINISH
+        
+    if TRANSITIONING
+      if counter < transitionTime
+        counter++
+        reposition and paint image n-1
+        reposition and paint image n    //NOTE: if 0 panels, this will display an empty scenario for a short time.
+      else
+        counter = 0
+        state = WAIT BEFORE INPUT
+    
+    if IDLE
+      paint image n
+      paint "next" icon
+      
+      if INPUT
+        currentPanel++
+        state = TRANSITIONING
+      
+    if WAIT BEFORE INPUT
+      paint image n
+      
+      if counter < waitTime
+        counter++
+      else
+        counter = 0
+        state = IDLE
+  }
+  
+  check for conditions: 0 panels, 1 panel, 2 panels.
+  
+  */
+  
+}
+
+const COMIC_STRIP_STATE_TRANSITIONING = 0;
+const COMIC_STRIP_STATE_WAIT_BEFORE_INPUT = 1;
+const COMIC_STRIP_STATE_IDLE = 2;
+
+const DEFAULT_COMIC_STRIP_WAIT_TIME_BEFORE_INPUT = 10;
+const DEFAULT_COMIC_STRIP_TRANSITION_TIME = 20;
 //==============================================================================
 
 /*  Effect Class
@@ -967,8 +1173,7 @@ window.onload = function() {
 };
 //==============================================================================
 
-
-/*  Global Scripts
+/*  Game Scripts
  */
 //==============================================================================
 function initialise() {
@@ -987,6 +1192,13 @@ function initialise() {
   this.assets.images.plate = new ImageAsset("assets/plate.png");
   this.assets.images.goal = new ImageAsset("assets/goal.png");
   this.assets.images.background = new ImageAsset("assets/background.png");
+  
+  this.assets.images.comicPanelA = new ImageAsset("assets/comic-panel-800x600-red.png");
+  this.assets.images.comicPanelB = new ImageAsset("assets/comic-panel-800x600-blue.png");
+  this.assets.images.comicPanelC = new ImageAsset("assets/comic-panel-800x600-yellow.png");
+  this.assets.images.comicPanelSmall = new ImageAsset("assets/comic-panel-500x500-green.png");
+  this.assets.images.comicPanelBig = new ImageAsset("assets/comic-panel-1000x1000-pink.png");
+  this.assets.images.comicPanelWide = new ImageAsset("assets/comic-panel-1000x300-teal.png");
   //--------------------------------
   
   //Animations
@@ -1132,14 +1344,6 @@ function initialise() {
 }
 
 function runStart() {
-  this.assetsLoaded = true;
-  for (let category in this.assets) {
-    for (let asset in this.assets[category]) {
-      this.assetsLoaded = this.assetsLoaded && this.assets[category][asset].loaded;
-    }
-  }
-  if (!this.assetsLoaded) return;
-  
   this.store.level = 1;
   
   if (this.pointer.state === INPUT_ACTIVE || 
@@ -1149,9 +1353,37 @@ function runStart() {
       this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE ||
       this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE ||
       this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
-    this.ui.backgroundImage = this.assets.images.background;
-    this.changeState(STATE_ACTION, startLevel1);
+    this.changeState(STATE_COMIC, comicStart);
   }
+}
+
+function comicStart() {
+  this.comicStrip = new ComicStrip(
+    "startcomic",
+    [ this.assets.images.comicPanelA,
+      this.assets.images.comicPanelB,
+      this.assets.images.comicPanelC ],
+    comicStartFinished);
+  this.comicStrip.start();
+  
+  this.comicStrip = new ComicStrip(
+    "startcomic",
+    [ this.assets.images.comicPanelA, 
+      this.assets.images.comicPanelSmall, 
+      this.assets.images.comicPanelBig, 
+      this.assets.images.comicPanelWide ],
+    comicStartFinished);
+  this.comicStrip.start();
+  
+  //this.comicStrip = new ComicStrip(
+  //  "startcomic",
+  //  [],
+  //  comicStartFinished);
+  //this.comicStrip.start();
+}
+
+function comicStartFinished() {
+  this.changeState(STATE_ACTION, startLevel1);
 }
 
 function runEnd() {}
@@ -1348,6 +1580,8 @@ function startLevel1() {
     plate.setAnimation("idle");
     this.areasOfEffect.push(plate);
   }
+  
+  this.ui.backgroundImage = this.assets.images.background;
 }
 
 function startLevel2() {

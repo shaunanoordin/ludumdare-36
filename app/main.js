@@ -40,11 +40,13 @@ var App = function () {
     this.assets = {
       images: {}
     };
-    this.assetsLoaded = true;
+    this.assetsLoaded = 0;
+    this.assetsTotal = 0;
     this.scripts = {
       run: null,
       runStart: null,
       runAction: null,
+      runComic: null,
       runEnd: null
     };
     this.actors = [];
@@ -55,6 +57,7 @@ var App = function () {
       foregroundImage: null,
       backgroundImage: null
     };
+    this.comicStrip = null;
     //--------------------------------
 
     //Prepare Input
@@ -131,6 +134,9 @@ var App = function () {
         case STATE_ACTION:
           this.run_action();
           break;
+        case STATE_COMIC:
+          this.run_comic();
+          break;
       }
 
       this.paint();
@@ -138,6 +144,16 @@ var App = function () {
   }, {
     key: "run_start",
     value: function run_start() {
+      this.assetsLoaded = 0;
+      this.assetsTotal = 0;
+      for (var category in this.assets) {
+        for (var asset in this.assets[category]) {
+          this.assetsTotal++;
+          if (this.assets[category][asset].loaded) this.assetsLoaded++;
+        }
+      }
+      if (this.assetsLoaded < this.assetsTotal) return;
+
       if (this.scripts.runStart) this.scripts.runStart.apply(this);
     }
   }, {
@@ -246,10 +262,13 @@ var App = function () {
             for (var _iterator6 = _actor.effects[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
               var _effect = _step6.value;
 
+              //TODO make this an external script
+              //----------------
               if (_effect.name === "push" && _actor.canBeMoved) {
                 _actor.x += _effect.data.x || 0;
                 _actor.y += _effect.data.y || 0;
               }
+              //----------------
             }
           } catch (err) {
             _didIteratorError6 = true;
@@ -361,6 +380,43 @@ var App = function () {
         }
       }
       //--------------------------------
+    }
+  }, {
+    key: "run_comic",
+    value: function run_comic() {
+      if (this.scripts.runComic) this.scripts.runComic.apply(this);
+
+      if (!this.comicStrip) return;
+      var comic = this.comicStrip;
+
+      if (comic.state !== COMIC_STRIP_STATE_TRANSITIONING && comic.currentPanel >= comic.panels.length) {
+        comic.onFinish.apply(this);
+      }
+
+      switch (comic.state) {
+        case COMIC_STRIP_STATE_TRANSITIONING:
+          if (comic.counter < comic.transitionTime) {
+            comic.counter++;
+          } else {
+            comic.counter = 0;
+            comic.state = COMIC_STRIP_STATE_WAIT_BEFORE_INPUT;
+          }
+          break;
+        case COMIC_STRIP_STATE_WAIT_BEFORE_INPUT:
+          if (comic.counter < comic.waitTime) {
+            comic.counter++;
+          } else {
+            comic.counter = 0;
+            comic.state = COMIC_STRIP_STATE_IDLE;
+          }
+          break;
+        case COMIC_STRIP_STATE_IDLE:
+          if (this.pointer.state === INPUT_ACTIVE || this.keys[KEY_CODES.UP].state === INPUT_ACTIVE || this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE || this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
+            comic.currentPanel++;
+            comic.state = COMIC_STRIP_STATE_TRANSITIONING;
+          }
+          break;
+      }
     }
 
     //----------------------------------------------------------------
@@ -499,6 +555,9 @@ var App = function () {
         case STATE_ACTION:
           this.paint_action();
           break;
+        case STATE_COMIC:
+          this.paint_comic();
+          break;
       }
 
       if (this.ui.foregroundImage && this.ui.foregroundImage.loaded) {
@@ -509,17 +568,28 @@ var App = function () {
   }, {
     key: "paint_start",
     value: function paint_start() {
-      if (this.assetsLoaded) {
+      var percentage = this.assetsTotal > 0 ? this.assetsLoaded / this.assetsTotal : 1;
+
+      this.context2d.font = DEFAULT_FONT;
+      this.context2d.textAlign = "center";
+      this.context2d.textBaseline = "middle";
+
+      if (this.assetsLoaded < this.assetsTotal) {
+        var rgb = Math.floor(percentage * 255);
         this.context2d.beginPath();
         this.context2d.rect(0, 0, this.width, this.height);
-        this.context2d.fillStyle = "#c33";
+        this.context2d.fillStyle = "rgba(" + rgb + "," + rgb + "," + rgb + ",1)";
         this.context2d.fill();
+        this.context2d.fillStyle = "#fff";
+        this.context2d.fillText("Loading... (" + this.assetsLoaded + "/" + this.assetsTotal + ")", this.width / 2, this.height / 2);
         this.context2d.closePath();
       } else {
         this.context2d.beginPath();
         this.context2d.rect(0, 0, this.width, this.height);
-        this.context2d.fillStyle = "#333";
+        this.context2d.fillStyle = "#fff";
         this.context2d.fill();
+        this.context2d.fillStyle = "#000";
+        this.context2d.fillText("Ready!", this.width / 2, this.height / 2);
         this.context2d.closePath();
       }
     }
@@ -557,10 +627,6 @@ var App = function () {
               case SHAPE_CIRCLE:
                 this.context2d.beginPath();
                 this.context2d.arc(aoe.x, aoe.y, aoe.size / 2, 0, 2 * Math.PI);
-                this.context2d.stroke();
-                this.context2d.closePath();
-                this.context2d.beginPath();
-                this.context2d.moveTo(aoe.x, aoe.y);
                 this.context2d.stroke();
                 this.context2d.closePath();
                 break;
@@ -696,6 +762,33 @@ var App = function () {
       }
     }
   }, {
+    key: "paint_comic",
+    value: function paint_comic() {
+      if (!this.comicStrip) return;
+      var comic = this.comicStrip;
+
+      this.context2d.beginPath();
+      this.context2d.rect(0, 0, this.width, this.height);
+      this.context2d.fillStyle = comic.background;
+      this.context2d.fill();
+      this.context2d.closePath();
+
+      switch (comic.state) {
+        case COMIC_STRIP_STATE_TRANSITIONING:
+          var offsetY = comic.transitionTime > 0 ? Math.floor(comic.counter / comic.transitionTime * -this.height) : 0;
+          this.paintComicPanel(comic.getPreviousPanel(), offsetY);
+          this.paintComicPanel(comic.getCurrentPanel(), offsetY + this.height);
+          break;
+        case COMIC_STRIP_STATE_WAIT_BEFORE_INPUT:
+          this.paintComicPanel(comic.getCurrentPanel());
+          break;
+        case COMIC_STRIP_STATE_IDLE:
+          this.paintComicPanel(comic.getCurrentPanel());
+          //TODO: Paint "NEXT" icon
+          break;
+      }
+    }
+  }, {
     key: "paintSprite",
     value: function paintSprite(obj) {
       if (!obj.spritesheet || !obj.spritesheet.loaded || !obj.animationSet || !obj.animationSet.actions[obj.animationName]) return;
@@ -720,6 +813,30 @@ var App = function () {
       var tgtH = srcH;
 
       this.context2d.drawImage(obj.spritesheet.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
+    }
+  }, {
+    key: "paintComicPanel",
+    value: function paintComicPanel() {
+      var panel = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
+      var offsetY = arguments.length <= 1 || arguments[1] === undefined ? 0 : arguments[1];
+
+      if (!panel || !panel.loaded) return;
+
+      var ratioX = this.width / panel.img.width;
+      var ratioY = this.height / panel.img.height;
+      var ratio = Math.min(1, Math.min(ratioX, ratioY));
+
+      var srcX = 0;
+      var srcY = 0;
+      var srcW = panel.img.width;
+      var srcH = panel.img.height;
+
+      var tgtW = panel.img.width * ratio;
+      var tgtH = panel.img.height * ratio;
+      var tgtX = (this.width - tgtW) / 2; //TODO
+      var tgtY = (this.height - tgtH) / 2 + offsetY; //TODO
+
+      this.context2d.drawImage(panel.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
     }
 
     //----------------------------------------------------------------
@@ -806,10 +923,12 @@ var INPUT_ACTIVE = 1;
 var INPUT_ENDED = 2;
 var INPUT_DISTANCE_SENSITIVITY = 16;
 var MAX_KEYS = 128;
+var DEFAULT_FONT = "32px monospace";
 
 var STATE_START = 0;
 var STATE_ACTION = 1;
-var STATE_END = 2;
+var STATE_COMIC = 2;
+var STATE_END = 3;
 
 var ANIMATION_RULE_BASIC = "basic";
 var ANIMATION_RULE_DIRECTIONAL = "directional";
@@ -1068,6 +1187,106 @@ var AoE = function () {
 var DURATION_INFINITE = 0;
 //==============================================================================
 
+/*  4-Koma Comic Strip Class
+ */
+//==============================================================================
+
+var ComicStrip = function () {
+  function ComicStrip() {
+    var name = arguments.length <= 0 || arguments[0] === undefined ? "" : arguments[0];
+    var panels = arguments.length <= 1 || arguments[1] === undefined ? [] : arguments[1];
+    var onFinish = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+
+    _classCallCheck(this, ComicStrip);
+
+    this.name = name;
+    this.panels = panels;
+    this.onFinish = onFinish;
+
+    this.waitTime = DEFAULT_COMIC_STRIP_WAIT_TIME_BEFORE_INPUT;
+    this.transitionTime = DEFAULT_COMIC_STRIP_TRANSITION_TIME;
+    this.background = "#333";
+
+    this.start();
+  }
+
+  _createClass(ComicStrip, [{
+    key: "start",
+    value: function start() {
+      this.currentPanel = 0;
+      this.state = COMIC_STRIP_STATE_TRANSITIONING;
+      this.counter = 0;
+    }
+  }, {
+    key: "getCurrentPanel",
+    value: function getCurrentPanel() {
+      if (this.currentPanel < 0 || this.currentPanel >= this.panels.length) {
+        return null;
+      } else {
+        return this.panels[this.currentPanel];
+      }
+    }
+  }, {
+    key: "getPreviousPanel",
+    value: function getPreviousPanel() {
+      if (this.currentPanel < 1 || this.currentPanel >= this.panels.length + 1) {
+        return null;
+      } else {
+        return this.panels[this.currentPanel - 1];
+      }
+    }
+
+    /* Logic loop should be as follows
+    
+    loop {
+      if !TRANSITIONING && currentPanel >= panels.length
+        onFinish()
+        FINISH
+          
+      if TRANSITIONING
+        if counter < transitionTime
+          counter++
+          reposition and paint image n-1
+          reposition and paint image n    //NOTE: if 0 panels, this will display an empty scenario for a short time.
+        else
+          counter = 0
+          state = WAIT BEFORE INPUT
+      
+      if IDLE
+        paint image n
+        paint "next" icon
+        
+        if INPUT
+          currentPanel++
+          state = TRANSITIONING
+        
+      if WAIT BEFORE INPUT
+        paint image n
+        
+        if counter < waitTime
+          counter++
+        else
+          counter = 0
+          state = IDLE
+    }
+    
+    check for conditions: 0 panels, 1 panel, 2 panels.
+    
+    */
+
+  }]);
+
+  return ComicStrip;
+}();
+
+var COMIC_STRIP_STATE_TRANSITIONING = 0;
+var COMIC_STRIP_STATE_WAIT_BEFORE_INPUT = 1;
+var COMIC_STRIP_STATE_IDLE = 2;
+
+var DEFAULT_COMIC_STRIP_WAIT_TIME_BEFORE_INPUT = 10;
+var DEFAULT_COMIC_STRIP_TRANSITION_TIME = 20;
+//==============================================================================
+
 /*  Effect Class
  */
 //==============================================================================
@@ -1310,8 +1529,7 @@ window.onload = function () {
 };
 //==============================================================================
 
-
-/*  Global Scripts
+/*  Game Scripts
  */
 //==============================================================================
 function initialise() {
@@ -1330,6 +1548,13 @@ function initialise() {
   this.assets.images.plate = new ImageAsset("assets/plate.png");
   this.assets.images.goal = new ImageAsset("assets/goal.png");
   this.assets.images.background = new ImageAsset("assets/background.png");
+
+  this.assets.images.comicPanelA = new ImageAsset("assets/comic-panel-800x600-red.png");
+  this.assets.images.comicPanelB = new ImageAsset("assets/comic-panel-800x600-blue.png");
+  this.assets.images.comicPanelC = new ImageAsset("assets/comic-panel-800x600-yellow.png");
+  this.assets.images.comicPanelSmall = new ImageAsset("assets/comic-panel-500x500-green.png");
+  this.assets.images.comicPanelBig = new ImageAsset("assets/comic-panel-1000x1000-pink.png");
+  this.assets.images.comicPanelWide = new ImageAsset("assets/comic-panel-1000x300-teal.png");
   //--------------------------------
 
   //Animations
@@ -1464,20 +1689,29 @@ function initialise() {
 }
 
 function runStart() {
-  this.assetsLoaded = true;
-  for (var category in this.assets) {
-    for (var asset in this.assets[category]) {
-      this.assetsLoaded = this.assetsLoaded && this.assets[category][asset].loaded;
-    }
-  }
-  if (!this.assetsLoaded) return;
-
   this.store.level = 1;
 
   if (this.pointer.state === INPUT_ACTIVE || this.keys[KEY_CODES.UP].state === INPUT_ACTIVE || this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE || this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE || this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE || this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE || this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
-    this.ui.backgroundImage = this.assets.images.background;
-    this.changeState(STATE_ACTION, startLevel1);
+    this.changeState(STATE_COMIC, comicStart);
   }
+}
+
+function comicStart() {
+  this.comicStrip = new ComicStrip("startcomic", [this.assets.images.comicPanelA, this.assets.images.comicPanelB, this.assets.images.comicPanelC], comicStartFinished);
+  this.comicStrip.start();
+
+  this.comicStrip = new ComicStrip("startcomic", [this.assets.images.comicPanelA, this.assets.images.comicPanelSmall, this.assets.images.comicPanelBig, this.assets.images.comicPanelWide], comicStartFinished);
+  this.comicStrip.start();
+
+  //this.comicStrip = new ComicStrip(
+  //  "startcomic",
+  //  [],
+  //  comicStartFinished);
+  //this.comicStrip.start();
+}
+
+function comicStartFinished() {
+  this.changeState(STATE_ACTION, startLevel1);
 }
 
 function runEnd() {}
@@ -1727,6 +1961,8 @@ function startLevel1() {
       }
     }
   }
+
+  this.ui.backgroundImage = this.assets.images.background;
 }
 
 function startLevel2() {
