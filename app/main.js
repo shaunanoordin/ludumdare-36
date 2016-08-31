@@ -46,6 +46,7 @@ var App = function () {
       run: null,
       runStart: null,
       runAction: null,
+      runComic: null,
       runEnd: null
     };
     this.actors = [];
@@ -132,6 +133,9 @@ var App = function () {
           break;
         case STATE_ACTION:
           this.run_action();
+          break;
+        case STATE_COMIC:
+          this.run_comic();
           break;
       }
 
@@ -258,10 +262,13 @@ var App = function () {
             for (var _iterator6 = _actor.effects[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
               var _effect = _step6.value;
 
+              //TODO make this an external script
+              //----------------
               if (_effect.name === "push" && _actor.canBeMoved) {
                 _actor.x += _effect.data.x || 0;
                 _actor.y += _effect.data.y || 0;
               }
+              //----------------
             }
           } catch (err) {
             _didIteratorError6 = true;
@@ -373,6 +380,43 @@ var App = function () {
         }
       }
       //--------------------------------
+    }
+  }, {
+    key: "run_comic",
+    value: function run_comic() {
+      if (this.scripts.runComic) this.scripts.runComic.apply(this);
+
+      if (!this.comicStrip) return;
+      var comic = this.comicStrip;
+
+      if (comic.state !== COMIC_STRIP_STATE_TRANSITIONING && comic.currentPanel >= comic.panels.length) {
+        comic.onFinish.apply(this);
+      }
+
+      switch (comic.state) {
+        case COMIC_STRIP_STATE_TRANSITIONING:
+          if (comic.counter < comic.transitionTime) {
+            comic.counter++;
+          } else {
+            comic.counter = 0;
+            comic.state = COMIC_STRIP_STATE_WAIT_BEFORE_INPUT;
+          }
+          break;
+        case COMIC_STRIP_STATE_WAIT_BEFORE_INPUT:
+          if (comic.counter < comic.waitTime) {
+            comic.counter++;
+          } else {
+            comic.counter = 0;
+            comic.state = COMIC_STRIP_STATE_IDLE;
+          }
+          break;
+        case COMIC_STRIP_STATE_IDLE:
+          if (this.pointer.state === INPUT_ACTIVE || this.keys[KEY_CODES.UP].state === INPUT_ACTIVE || this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE || this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
+            comic.currentPanel++;
+            comic.state = COMIC_STRIP_STATE_TRANSITIONING;
+          }
+          break;
+      }
     }
 
     //----------------------------------------------------------------
@@ -510,6 +554,9 @@ var App = function () {
           break;
         case STATE_ACTION:
           this.paint_action();
+          break;
+        case STATE_COMIC:
+          this.paint_comic();
           break;
       }
 
@@ -715,6 +762,33 @@ var App = function () {
       }
     }
   }, {
+    key: "paint_comic",
+    value: function paint_comic() {
+      if (!this.comicStrip) return;
+      var comic = this.comicStrip;
+
+      this.context2d.beginPath();
+      this.context2d.rect(0, 0, this.width, this.height);
+      this.context2d.fillStyle = comic.background;
+      this.context2d.fill();
+      this.context2d.closePath();
+
+      switch (comic.state) {
+        case COMIC_STRIP_STATE_TRANSITIONING:
+          var offsetY = comic.transitionTime > 0 ? Math.floor(comic.counter / comic.transitionTime * -this.height) : 0;
+          this.paintComicPanel(comic.getPreviousPanel(), offsetY);
+          this.paintComicPanel(comic.getCurrentPanel(), offsetY + this.height);
+          break;
+        case COMIC_STRIP_STATE_WAIT_BEFORE_INPUT:
+          this.paintComicPanel(comic.getCurrentPanel());
+          break;
+        case COMIC_STRIP_STATE_IDLE:
+          this.paintComicPanel(comic.getCurrentPanel());
+          //TODO: Paint "NEXT" icon
+          break;
+      }
+    }
+  }, {
     key: "paintSprite",
     value: function paintSprite(obj) {
       if (!obj.spritesheet || !obj.spritesheet.loaded || !obj.animationSet || !obj.animationSet.actions[obj.animationName]) return;
@@ -739,6 +813,30 @@ var App = function () {
       var tgtH = srcH;
 
       this.context2d.drawImage(obj.spritesheet.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
+    }
+  }, {
+    key: "paintComicPanel",
+    value: function paintComicPanel() {
+      var panel = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
+      var offsetY = arguments.length <= 1 || arguments[1] === undefined ? 0 : arguments[1];
+
+      if (!panel || !panel.loaded) return;
+
+      var ratioX = this.width / panel.img.width;
+      var ratioY = this.height / panel.img.height;
+      var ratio = Math.min(1, Math.min(ratioX, ratioY));
+
+      var srcX = 0;
+      var srcY = 0;
+      var srcW = panel.img.width;
+      var srcH = panel.img.height;
+
+      var tgtW = panel.img.width * ratio;
+      var tgtH = panel.img.height * ratio;
+      var tgtX = (this.width - tgtW) / 2; //TODO
+      var tgtY = (this.height - tgtH) / 2 + offsetY; //TODO
+
+      this.context2d.drawImage(panel.img, srcX, srcY, srcW, srcH, tgtX, tgtY, tgtW, tgtH);
     }
 
     //----------------------------------------------------------------
@@ -829,7 +927,8 @@ var DEFAULT_FONT = "32px monospace";
 
 var STATE_START = 0;
 var STATE_ACTION = 1;
-var STATE_END = 2;
+var STATE_COMIC = 2;
+var STATE_END = 3;
 
 var ANIMATION_RULE_BASIC = "basic";
 var ANIMATION_RULE_DIRECTIONAL = "directional";
@@ -1117,6 +1216,24 @@ var ComicStrip = function () {
       this.currentPanel = 0;
       this.state = COMIC_STRIP_STATE_TRANSITIONING;
       this.counter = 0;
+    }
+  }, {
+    key: "getCurrentPanel",
+    value: function getCurrentPanel() {
+      if (this.currentPanel < 0 || this.currentPanel >= this.panels.length) {
+        return null;
+      } else {
+        return this.panels[this.currentPanel];
+      }
+    }
+  }, {
+    key: "getPreviousPanel",
+    value: function getPreviousPanel() {
+      if (this.currentPanel < 1 || this.currentPanel >= this.panels.length + 1) {
+        return null;
+      } else {
+        return this.panels[this.currentPanel - 1];
+      }
     }
 
     /* Logic loop should be as follows
@@ -1575,9 +1692,26 @@ function runStart() {
   this.store.level = 1;
 
   if (this.pointer.state === INPUT_ACTIVE || this.keys[KEY_CODES.UP].state === INPUT_ACTIVE || this.keys[KEY_CODES.DOWN].state === INPUT_ACTIVE || this.keys[KEY_CODES.LEFT].state === INPUT_ACTIVE || this.keys[KEY_CODES.RIGHT].state === INPUT_ACTIVE || this.keys[KEY_CODES.SPACE].state === INPUT_ACTIVE || this.keys[KEY_CODES.ENTER].state === INPUT_ACTIVE) {
-    this.ui.backgroundImage = this.assets.images.background;
-    this.changeState(STATE_ACTION, startLevel1);
+    this.changeState(STATE_COMIC, comicStart);
   }
+}
+
+function comicStart() {
+  this.comicStrip = new ComicStrip("startcomic", [this.assets.images.comicPanelA, this.assets.images.comicPanelB, this.assets.images.comicPanelC], comicStartFinished);
+  this.comicStrip.start();
+
+  this.comicStrip = new ComicStrip("startcomic", [this.assets.images.comicPanelA, this.assets.images.comicPanelSmall, this.assets.images.comicPanelBig, this.assets.images.comicPanelWide], comicStartFinished);
+  this.comicStrip.start();
+
+  //this.comicStrip = new ComicStrip(
+  //  "startcomic",
+  //  [],
+  //  comicStartFinished);
+  //this.comicStrip.start();
+}
+
+function comicStartFinished() {
+  this.changeState(STATE_ACTION, startLevel1);
 }
 
 function runEnd() {}
@@ -1827,6 +1961,8 @@ function startLevel1() {
       }
     }
   }
+
+  this.ui.backgroundImage = this.assets.images.background;
 }
 
 function startLevel2() {
