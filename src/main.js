@@ -48,6 +48,7 @@ class App {
       foregroundImage: null,
       backgroundImage: null,
     };
+    this.comicStrip = null;
     //--------------------------------
     
     //Prepare Input
@@ -759,6 +760,76 @@ class AoE {
 const DURATION_INFINITE = 0;
 //==============================================================================
 
+/*  4-Koma Comic Strip Class
+ */
+//==============================================================================
+class ComicStrip {
+  constructor(name = "", panels = [], onFinish = null) {
+    this.name = name;
+    this.panels = panels;
+    this.onFinish = onFinish;
+    
+    this.waitTime = DEFAULT_COMIC_STRIP_WAIT_TIME_BEFORE_INPUT;
+    this.transitionTime = DEFAULT_COMIC_STRIP_TRANSITION_TIME;    
+    this.background = "#333";
+    
+    this.start();
+  }
+  
+  start() {
+    this.currentPanel = 0;
+    this.state = COMIC_STRIP_STATE_TRANSITIONING;
+    this.counter = 0;
+  }
+  
+  /* Logic loop should be as follows
+  
+  loop {
+    if !TRANSITIONING && currentPanel >= panels.length
+      onFinish()
+      FINISH
+        
+    if TRANSITIONING
+      if counter < transitionTime
+        counter++
+        reposition and paint image n-1
+        reposition and paint image n    //NOTE: if 0 panels, this will display an empty scenario for a short time.
+      else
+        counter = 0
+        state = WAIT BEFORE INPUT
+    
+    if IDLE
+      paint image n
+      paint "next" icon
+      
+      if INPUT
+        currentPanel++
+        state = TRANSITIONING
+      
+    if WAIT BEFORE INPUT
+      paint image n
+      
+      if counter < waitTime
+        counter++
+      else
+        counter = 0
+        state = IDLE
+  }
+  
+  check for conditions: 0 panels, 1 panel, 2 panels.
+  
+  */
+  
+}
+
+const COMIC_STRIP_STATE_TRANSITIONING = 0;
+const COMIC_STRIP_STATE_WAIT_BEFORE_INPUT = 1;
+const COMIC_STRIP_STATE_IDLE = 2;
+
+const DEFAULT_COMIC_STRIP_WAIT_TIME_BEFORE_INPUT = 10;
+const DEFAULT_COMIC_STRIP_TRANSITION_TIME = 20;
+//==============================================================================
+
 /*  Effect Class
  */
 //==============================================================================
@@ -987,8 +1058,7 @@ window.onload = function() {
 };
 //==============================================================================
 
-
-/*  Global Scripts
+/*  Game Scripts
  */
 //==============================================================================
 function initialise() {
@@ -1007,6 +1077,13 @@ function initialise() {
   this.assets.images.plate = new ImageAsset("assets/plate.png");
   this.assets.images.goal = new ImageAsset("assets/goal.png");
   this.assets.images.background = new ImageAsset("assets/background.png");
+  
+  this.assets.images.comicPanelA = new ImageAsset("assets/comic-panel-800x600-red.png");
+  this.assets.images.comicPanelB = new ImageAsset("assets/comic-panel-800x600-blue.png");
+  this.assets.images.comicPanelC = new ImageAsset("assets/comic-panel-800x600-yellow.png");
+  this.assets.images.comicPanelSmall = new ImageAsset("assets/comic-panel-500x500-green.png");
+  this.assets.images.comicPanelBig = new ImageAsset("assets/comic-panel-1000x1000-pink.png");
+  this.assets.images.comicPanelWide = new ImageAsset("assets/comic-panel-1000x300-teal.png");
   //--------------------------------
   
   //Animations
